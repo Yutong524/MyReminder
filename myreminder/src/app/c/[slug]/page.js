@@ -12,6 +12,12 @@ export default async function CountdownPage({ params }) {
     const m = await prisma.moment.findUnique({ where: { slug } });
     if (!m) return notFound();
 
+    const logs = await prisma.deliveryLog.findMany({
+        where: { momentId: m.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+    });
+
     return (
         <div className={`theme-${m.theme} page-wrap`}>
             <main className="card">
@@ -19,6 +25,21 @@ export default async function CountdownPage({ params }) {
                 <h1 className="title">{m.title}</h1>
                 <p className="subtitle">Time left · {humanizeRemaining(m.targetUtc.toISOString())}</p>
                 <Countdown targetIso={m.targetUtc.toISOString()} />
+
+                {logs.length > 0 && (
+                    <div style={{ marginTop: 24 }}>
+                        <h3 style={{ margin: '12px 0 8px 0' }}>Recent deliveries</h3>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, opacity: .9 }}>
+                            {logs.map((l) => (
+                                <li key={l.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <code style={{ opacity: .8 }}>{l.status}</code>
+                                    <span style={{ opacity: .8 }}>{new Date(l.createdAt).toLocaleString()}</span>
+                                    <span style={{ opacity: .8 }}>{l.message || ''}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -21,12 +21,76 @@ model Moment {
   timeZone   String
   visibility Visibility @default(PUBLIC)
   theme      String     @default("default")
+  ownerEmail String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  rules      ReminderRule[]
+  jobs       ReminderJob[]
+  logs       DeliveryLog[]
 }
 
 enum Visibility {
   PUBLIC
   UNLISTED
   PRIVATE
+}
+
+enum Channel {
+  EMAIL
+}
+
+model ReminderRule {
+  id            String   @id @default(cuid())
+  momentId      String
+  moment        Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  channel       Channel  @default(EMAIL)
+  offsetMinutes Int
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  jobs          ReminderJob[]
+}
+
+enum JobStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  CANCELED
+  SKIPPED
+}
+
+model ReminderJob {
+  id               String     @id @default(cuid())
+  momentId         String
+  ruleId           String
+  moment           Moment     @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  rule             ReminderRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  scheduledAt      DateTime
+  status           JobStatus  @default(PENDING)
+  attempts         Int        @default(0)
+  lastError        String?
+  recipientEmail   String
+  subject          String
+  body             String
+  providerMessageId String?
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  logs             DeliveryLog[]
+
+  @@index([status, scheduledAt])
+}
+
+model DeliveryLog {
+  id         String    @id @default(cuid())
+  momentId   String
+  jobId      String
+  moment     Moment    @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  job        ReminderJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status     JobStatus
+  message    String?
+  createdAt  DateTime  @default(now())
 }

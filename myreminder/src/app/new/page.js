@@ -17,6 +17,11 @@ export default function NewMomentPage() {
     const [date, setDate] = useState('');
     const [time, setTime] = useState('09:00');
     const [timeZone, setTimeZone] = useState(detectTZ());
+    const [email, setEmail] = useState('');
+    const [rule7, setRule7] = useState(true);
+    const [rule3, setRule3] = useState(true);
+    const [rule1, setRule1] = useState(true);
+    const [rule0, setRule0] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [err, setErr] = useState(null);
     const [theme, setTheme] = useState('default');
@@ -52,7 +57,9 @@ export default function NewMomentPage() {
                     title: title.trim(),
                     localDateTime,
                     timeZone,
-                    theme
+                    theme,
+                    email,
+                    rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 }
                 }),
             });
 
@@ -140,6 +147,27 @@ export default function NewMomentPage() {
                         <option value="night">Night</option>
                     </select>
                 </label>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Reminder (Email)</legend>
+                    <label style={{ display: 'block', marginBottom: 8 }}>
+                        Target email
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="you@example.com"
+                            style={{ width: '100%', padding: 8, marginTop: 4 }}
+                        />
+                    </label>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <label><input type="checkbox" checked={rule7} onChange={(e) => setRule7(e.target.checked)} /> 7 days before</label>
+                        <label><input type="checkbox" checked={rule3} onChange={(e) => setRule3(e.target.checked)} /> 3 days before</label>
+                        <label><input type="checkbox" checked={rule1} onChange={(e) => setRule1(e.target.checked)} /> 1 day before</label>
+                        <label><input type="checkbox" checked={rule0} onChange={(e) => setRule0(e.target.checked)} /> Day-of</label>
+                    </div>
+                    <small style={{ opacity: .75 }}>Leave email empty if you don’t want reminders.</small>
+                </fieldset>
 
                 <button
                     disabled={!canSubmit || submitting}

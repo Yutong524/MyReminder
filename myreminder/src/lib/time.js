@@ -15,3 +15,25 @@ export function humanizeRemaining(targetIso) {
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m`;
 }
+
+export function formatInIana(utcIso, timeZone, opts = {}) {
+    const d = new Date(utcIso);
+    const fmt = new Intl.DateTimeFormat(opts.locale || 'en-US', {
+        dateStyle: opts.dateStyle || 'full',
+        timeStyle: opts.timeStyle || 'short',
+        timeZone,
+        ...opts,
+    });
+    return fmt.format(d);
+}
+
+
+export function formatInLocal(utcIso, opts = {}) {
+    const d = new Date(utcIso);
+    const fmt = new Intl.DateTimeFormat(opts.locale || 'en-US', {
+        dateStyle: opts.dateStyle || 'full',
+        timeStyle: opts.timeStyle || 'short',
+        ...opts,
+    });
+    return fmt.format(d);
+}

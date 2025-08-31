@@ -25,6 +25,8 @@ export default function NewMomentPage() {
     const [submitting, setSubmitting] = useState(false);
     const [err, setErr] = useState(null);
     const [theme, setTheme] = useState('default');
+    const [visibility, setVisibility] = useState('PUBLIC');
+    const [passcode, setPasscode] = useState('');
 
     useEffect(() => {
         const now = new Date(Date.now() + 60 * 60 * 1000);
@@ -42,7 +44,12 @@ export default function NewMomentPage() {
         [date, time]
     );
 
-    const canSubmit = !!(title.trim() && localDateTime && timeZone);
+    const canSubmit = !!(
+        title.trim() &&
+        localDateTime &&
+        timeZone &&
+        (visibility !== 'PRIVATE' || (passcode && passcode.trim().length >= 4))
+    );
 
     async function onSubmit(e) {
         e.preventDefault();
@@ -59,7 +66,9 @@ export default function NewMomentPage() {
                     timeZone,
                     theme,
                     email,
-                    rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 }
+                    rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
+                    visibility,
+                    passcode: visibility === 'PRIVATE' ? passcode : undefined,
                 }),
             });
 
@@ -147,6 +156,56 @@ export default function NewMomentPage() {
                         <option value="night">Night</option>
                     </select>
                 </label>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Privacy & Access</legend>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <label>
+                            <input
+                                type="radio"
+                                name="vis"
+                                value="PUBLIC"
+                                checked={visibility === 'PUBLIC'}
+                                onChange={() => setVisibility('PUBLIC')}
+                            />{' '}
+                            Public
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="vis"
+                                value="UNLISTED"
+                                checked={visibility === 'UNLISTED'}
+                                onChange={() => setVisibility('UNLISTED')}
+                            />{' '}
+                            Unlisted (no index)
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="vis"
+                                value="PRIVATE"
+                                checked={visibility === 'PRIVATE'}
+                                onChange={() => setVisibility('PRIVATE')}
+                            />{' '}
+                            Private (passcode)
+                        </label>
+                    </div>
+                    {visibility === 'PRIVATE' && (
+                        <label style={{ display: 'block' }}>
+                            Passcode
+                            <input
+                                value={passcode}
+                                onChange={(e) => setPasscode(e.target.value)}
+                                placeholder="4–64 characters"
+                                minLength={4}
+                                maxLength={64}
+                                required
+                                style={{ width: '100%', padding: 8, marginTop: 4 }}
+                            />
+                        </label>
+                    )}
+                </fieldset>
 
                 <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
                     <legend>Reminder (Email)</legend>

@@ -1,16 +1,41 @@
 import { prisma } from '@/lib/prisma';
 import Countdown from './view-client';
 import { notFound } from 'next/navigation';
-import { humanizeRemaining } from '@/lib/time';
+import { humanizeRemaining, formatInIana, formatInLocal } from '@/lib/time';
 import ShareControls from './share-client';
+import { cookies } from 'next/headers';
+import { cookieNameFor, verifyAccessToken } from '@/lib/access';
+import AccessGateClient from './passcode-client';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CountdownPage({ params }) {
     const { slug } = await params;
 
-    const m = await prisma.moment.findUnique({ where: { slug } });
+    const m = await prisma.moment.findUnique({
+        where: { slug },
+        select: {
+            id: true, title: true, slug: true, targetUtc: true, timeZone: true, theme: true, visibility: true
+        }
+    });
     if (!m) return notFound();
+
+    if (m.visibility === 'PRIVATE') {
+        const token = cookies().get(cookieNameFor(slug))?.value;
+        const allowed = verifyAccessToken(token, slug);
+        if (!allowed) {
+
+            return (
+                <div className="page-wrap theme-default">
+                    <main className="card">
+                        <h1 className="title">Private Countdown</h1>
+                        <p className="subtitle">This countdown is private. Enter passcode to view.</p>
+                        <AccessGate slug={slug} />
+                    </main>
+                </div>
+            );
+        }
+    }
 
     const logs = await prisma.deliveryLog.findMany({
         where: { momentId: m.id },
@@ -23,7 +48,13 @@ export default async function CountdownPage({ params }) {
             <main className="card">
                 <ShareControls slug={slug} title={m.title} />
                 <h1 className="title">{m.title}</h1>
-                <p className="subtitle">Time left · {humanizeRemaining(m.targetUtc.toISOString())}</p>
+                <p className="subtitle">
+                    Time left · {humanizeRemaining(m.targetUtc.toISOString())}
+                </p>
+                <p style={{ opacity: .85, marginTop: 6, marginBottom: 16 }}>
+                    Event time: {formatInIana(m.targetUtc.toISOString(), m.timeZone)} ({m.timeZone}) ·
+                    <span style={{ marginLeft: 6 }}>Your local: {formatInLocal(m.targetUtc.toISOString())}</span>
+                </p>
                 <Countdown targetIso={m.targetUtc.toISOString()} />
 
                 {logs.length > 0 && (
@@ -48,23 +79,30 @@ export default async function CountdownPage({ params }) {
 export async function generateMetadata({ params }) {
     const { slug } = await params;
 
-    const m = await prisma.moment.findUnique({ where: { slug } });
+    const m = await prisma.moment.findUnique({
+        where: { slug }, select: { title: true, targetUtc: true, timeZone: true, theme: true, visibility: true }
+    });
     if (!m) return {};
 
+    if (m.visibility === 'PRIVATE') {
+        return {
+            title: 'Private Countdown',
+            description: 'This countdown is private.',
+            robots: { index: false, follow: false, nocache: true },
+        };
+    }
     const left = humanizeRemaining(m.targetUtc.toISOString());
     const title = `${m.title} — Countdown`;
-    const description =
-        left === 'started' ? `${m.title} has started.` : `${left} until ${m.title}.`;
+    const description = left === 'started' ? `${m.title} has started.` : `${left} until ${m.title}.`;
     const ogImage = `/c/${slug}/opengraph-image`;
-
+    const robots = m.visibility === 'UNLISTED' ? { index: false, follow: false } : undefined;
     return {
-        title,
-        description,
-        openGraph: {
-            title,
-            description,
-            images: [ogImage],
-            type: 'website',
+        title, description, robots,
+        openGraph: { 
+            title, 
+            description, 
+            images: [ogImage], 
+            type: 'website' 
         },
         twitter: {
             card: 'summary_large_image',
@@ -73,4 +111,8 @@ export async function generateMetadata({ params }) {
             images: [ogImage],
         },
     };
+}
+
+function AccessGate({ slug }) {
+    return <AccessGateClient slug={slug} />;
 }

@@ -17,10 +17,22 @@ const themeMap = {
 export default async function OpengraphImage({ params }) {
     const { slug } = await params;
 
-    const m = await prisma.moment.findUnique({ where: { slug } });
+    const m = await prisma.moment.findUnique({
+        where: { slug }, select: { title: true, targetUtc: true, timeZone: true, theme: true, visibility: true }
+    });
+    if (!m) {
+        return new ImageResponse(<div style={{ fontSize: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>Not found</div>, { ...size });
+    }
+    if (m.visibility === 'PRIVATE') {
+        return new ImageResponse(
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#e2e8f0', fontSize: 56 }}>
+                Private Countdown
+            </div>, { ...size }
+        );
+    }
     const t = themeMap[m?.theme || 'default'];
-    const left = m ? humanizeRemaining(m.targetUtc.toISOString()) : 'Countdown';
-    const title = m?.title || 'Countdown';
+    const left = humanizeRemaining(m.targetUtc.toISOString());
+    const title = m.title || 'Countdown';
 
     return new ImageResponse(
         (

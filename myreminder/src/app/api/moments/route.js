@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { slugifyTitle } from '@/lib/slug';
 import { localToUtc } from '@/lib/time';
+import bcrypt from 'bcryptjs';
 
 const THEMES = new Set(['default', 'birthday', 'exam', 'launch', 'night']);
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -16,11 +17,12 @@ export async function POST(req) {
         const title = (body.title || '').trim();
         const localDateTime = (body.localDateTime || '').trim();
         const timeZone = (body.timeZone || '').trim();
-        const visibility = body.visibility || 'PUBLIC';
+        const visibility = (body.visibility || 'PUBLIC').toUpperCase();
         const theme = (body.theme || 'default').trim().toLowerCase();
         const safeTheme = THEMES.has(theme) ? theme : 'default';
         const email = (body.email || '').trim();
         const rules = body.rules || {};
+        const passcode = (body.passcode || '').trim();
 
         if (!title) return bad('Title is required');
         if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDateTime)) {
@@ -40,10 +42,20 @@ export async function POST(req) {
             slug = slugifyTitle(title);
         }
 
+        if (visibility === 'PRIVATE' && !passcode) {
+            return bad('Passcode is required for PRIVATE moments');
+        }
+        let passcodeHash = null;
+        if (visibility === 'PRIVATE' && passcode) {
+            if (passcode.length < 4 || passcode.length > 64) return bad('Passcode length must be 4~64');
+            passcodeHash = await bcrypt.hash(passcode, 10);
+        }
+
         const created = await prisma.moment.create({
             data: {
                 title, slug, targetUtc, timeZone, visibility, theme: safeTheme,
-                ownerEmail: email || null
+                ownerEmail: email || null,
+                passcodeHash
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });
@@ -62,7 +74,7 @@ export async function POST(req) {
             const now = new Date();
             const jobsData = createdRules.flatMap((r) => {
                 const scheduledAt = new Date(new Date(created.targetUtc).getTime() + r.offsetMinutes * 60000);
-                if (scheduledAt.getTime() <= now.getTime()) return []; // 跳过已过期
+                if (scheduledAt.getTime() <= now.getTime()) return []
                 const link = `${BASE_URL}/c/${created.slug}`;
                 const subject = `${created.title} — Reminder`;
                 const body = [

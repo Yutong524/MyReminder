@@ -119,3 +119,15 @@
     --fg: #d1d5db;
     --acc: #a78bfa;
 }
+
+.theme-default .card input {
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-default .card button {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: inherit;
+}

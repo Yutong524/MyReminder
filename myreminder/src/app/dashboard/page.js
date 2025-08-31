@@ -19,6 +19,10 @@ export default async function Dashboard() {
         <main style={{ maxWidth: 720, margin: "40px auto", padding: 16 }}>
             <h1>My Countdowns</h1>
             <p style={{ opacity: .8 }}>Only countdowns you created while signed in will appear here.</p>
+            <div style={{ margin: "8px 0 16px", display: "flex", gap: 12 }}>
+                <a href="/api/export" rel="nofollow">Download my data (JSON)</a>
+                <a href="/api/export?format=csv" rel="nofollow">Download moments (CSV)</a>
+            </div>
             <ul style={{ listStyle: "none", padding: 0, marginTop: 16 }}>
                 {moments.map(m => (
                     <li key={m.id} style={{ padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.1)" }}>
@@ -31,6 +35,7 @@ export default async function Dashboard() {
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <a href={`/c/${m.slug}/edit`}>Edit</a>
+                                <a href={`/api/moments/${m.slug}/export`} rel="nofollow">Export</a>
                                 <form action={`/api/moments/${m.slug}/delete`} method="post">
                                     <button>Delete</button>
                                 </form>

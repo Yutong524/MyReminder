@@ -94,6 +94,11 @@ export default function NewMomentPage() {
     return (
         <main style={{ maxWidth: 560, margin: '40px auto', padding: 16 }}>
             <h1>Create Countdown</h1>
+            <p style={{ opacity: .8, margin: "8px 0 16px" }}>
+                You can create a countdown without signing in.
+                You’ll get the share link (and email reminders if you set one),
+                but <b>you won’t be able to save/manage/edit</b> it later unless you sign in.
+            </p>
 
             <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
                 <label>

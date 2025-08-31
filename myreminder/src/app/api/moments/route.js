@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { slugifyTitle } from '@/lib/slug';
 import { localToUtc } from '@/lib/time';
 import bcrypt from 'bcryptjs';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 const THEMES = new Set(['default', 'birthday', 'exam', 'launch', 'night']);
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -51,11 +53,15 @@ export async function POST(req) {
             passcodeHash = await bcrypt.hash(passcode, 10);
         }
 
-        const created = await prisma.moment.create({
+        const session = await getServerSession(authOptions);
+   const userId = session?.user?.id || null;
+
+   const created = await prisma.moment.create({
             data: {
                 title, slug, targetUtc, timeZone, visibility, theme: safeTheme,
                 ownerEmail: email || null,
-                passcodeHash
+                passcodeHash,
+                userId
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });

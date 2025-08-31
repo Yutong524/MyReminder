@@ -16,6 +16,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <header style={{ maxWidth: 960, margin: "16px auto", padding: "0 16px", display: "flex", justifyContent: "space-between" }}>
+          <a href="/" style={{ fontWeight: 600 }}>MyReminder</a>
+          <nav style={{ display: "flex", gap: 12 }}>
+            <a href="/new">Create</a>
+            <a href="/dashboard">My Countdowns</a>
+            <a href="/api/auth/signin">Sign in</a>
+            <a href="/api/auth/signout">Sign out</a>
+          </nav>
+        </header>
         {children}
       </body>
     </html>

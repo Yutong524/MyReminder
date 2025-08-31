@@ -29,9 +29,12 @@ export default async function Dashboard() {
                                     /c/{m.slug} · {m.visibility}
                                 </div>
                             </div>
-                            <form action={`/api/moments/${m.slug}/delete`} method="post">
-                                <button>Delete</button>
-                            </form>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <a href={`/c/${m.slug}/edit`}>Edit</a>
+                                <form action={`/api/moments/${m.slug}/delete`} method="post">
+                                    <button>Delete</button>
+                                </form>
+                            </div>
                         </div>
                     </li>
                 ))}

@@ -19,6 +19,7 @@ export default function NewMomentPage() {
     const [timeZone, setTimeZone] = useState(detectTZ());
     const [submitting, setSubmitting] = useState(false);
     const [err, setErr] = useState(null);
+    const [theme, setTheme] = useState('default');
 
     useEffect(() => {
         const now = new Date(Date.now() + 60 * 60 * 1000);
@@ -31,21 +32,42 @@ export default function NewMomentPage() {
         setTime(`${hh}:${mi}`);
     }, []);
 
-    const localDateTime = useMemo(() => (date && time ? `${date}T${time}` : ''), [date, time]);
+    const localDateTime = useMemo(
+        () => (date && time ? `${date}T${time}` : ''),
+        [date, time]
+    );
+
+    const canSubmit = !!(title.trim() && localDateTime && timeZone);
 
     async function onSubmit(e) {
         e.preventDefault();
+        if (!canSubmit || submitting) return;
         setErr(null);
         setSubmitting(true);
         try {
             const res = await fetch('/api/moments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, localDateTime, timeZone }),
+                body: JSON.stringify({
+                    title: title.trim(),
+                    localDateTime,
+                    timeZone,
+                    theme
+                }),
             });
-            const json = await res.json();
-            if (!res.ok) setErr(json?.error || 'Create failed');
-            else router.push(json.url);
+
+            let data;
+            try {
+                data = await res.clone().json();
+            } catch {
+                data = { error: await res.text() };
+            }
+
+            if (!res.ok) {
+                throw new Error(data?.error || 'Create failed');
+            }
+
+            router.push(data.url);
         } catch (error) {
             setErr(error?.message || 'Network error');
         } finally {
@@ -56,32 +78,76 @@ export default function NewMomentPage() {
     return (
         <main style={{ maxWidth: 560, margin: '40px auto', padding: 16 }}>
             <h1>Create Countdown</h1>
+
             <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
                 <label>
                     Title
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+                    <input
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: 8 }}
+                        autoFocus
+                    />
                 </label>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <label>
                         Date
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            required
+                            style={{ width: '100%', padding: 8 }}
+                        />
                     </label>
                     <label>
                         Time
-                        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+                        <input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            required
+                            style={{ width: '100%', padding: 8 }}
+                        />
                     </label>
                 </div>
 
                 <label>
                     Time Zone (IANA)
-                    <input value={timeZone} onChange={(e) => setTimeZone(e.target.value)} required style={{ width: '100%', padding: 8 }} />
+                    <input
+                        value={timeZone}
+                        onChange={(e) => setTimeZone(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: 8 }}
+                        placeholder="America/Los_Angeles"
+                    />
                     <small>Detected: {detectTZ()}</small>
                 </label>
 
-                <button disabled={submitting || !title || !localDateTime || !timeZone}>
+                <label>
+                    Theme
+                    <select
+                        value={theme}
+                        onChange={(e) => setTheme(e.target.value)}
+                        style={{ width: '100%', padding: 8 }}
+                    >
+                        <option value="default">Default</option>
+                        <option value="birthday">Birthday</option>
+                        <option value="exam">Exam</option>
+                        <option value="launch">Launch</option>
+                        <option value="night">Night</option>
+                    </select>
+                </label>
+
+                <button
+                    disabled={!canSubmit || submitting}
+                    aria-busy={submitting ? 'true' : 'false'}
+                >
                     {submitting ? 'Creating...' : 'Create'}
                 </button>
+
                 {err && <p style={{ color: 'crimson' }}>{err}</p>}
             </form>
         </main>

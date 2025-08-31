@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { slugifyTitle } from '@/lib/slug';
 import { localToUtc } from '@/lib/time';
 
+const THEMES = new Set(['default', 'birthday', 'exam', 'launch', 'night']);
+
 function bad(msg, code = 400) {
     return NextResponse.json({ error: msg }, { status: code });
 }
@@ -10,11 +12,12 @@ function bad(msg, code = 400) {
 export async function POST(req) {
     try {
         const body = await req.json();
-
         const title = (body.title || '').trim();
         const localDateTime = (body.localDateTime || '').trim();
         const timeZone = (body.timeZone || '').trim();
         const visibility = body.visibility || 'PUBLIC';
+        const theme = (body.theme || 'default').trim().toLowerCase();
+        const safeTheme = THEMES.has(theme) ? theme : 'default';
 
         if (!title) return bad('Title is required');
         if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDateTime)) {
@@ -35,7 +38,7 @@ export async function POST(req) {
         }
 
         const created = await prisma.moment.create({
-            data: { title, slug, targetUtc, timeZone, visibility },
+            data: { title, slug, targetUtc, timeZone, visibility, theme: safeTheme },
             select: { slug: true },
         });
 

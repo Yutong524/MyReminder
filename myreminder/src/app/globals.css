@@ -1,26 +1,121 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+.page-wrap {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg, #0f172a);
+    background: linear-gradient(135deg, var(--bg, #0f172a) 0%, #000 100%);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.card {
+    width: min(720px, 100%);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 32px;
+    backdrop-filter: blur(6px);
+    color: var(--fg, #e5e7eb);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.title {
+    font-size: clamp(24px, 4vw, 40px);
+    margin: 0 0 6px 0;
+    font-weight: 800;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.subtitle {
+    margin: 0 0 16px 0;
+    opacity: .85
+}
+
+.theme-default {
+    --bg: #0f172a;
+    --fg: #e2e8f0;
+    --acc: #60a5fa;
+}
+
+.theme-birthday {
+    --bg: #8b5cf6;
+    --fg: #fff7ed;
+    --acc: #f59e0b;
+}
+
+.theme-exam {
+    --bg: #0ea5e9;
+    --fg: #f8fafc;
+    --acc: #022c22;
+}
+
+.theme-launch {
+    --bg: #111827;
+    --fg: #f3f4f6;
+    --acc: #10b981;
+}
+
+.theme-night {
+    --bg: #0b1021;
+    --fg: #d1d5db;
+    --acc: #a78bfa;
+}
+
+.page-wrap {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg, #0f172a);
+    background: linear-gradient(135deg, var(--bg, #0f172a) 0%, #000 100%);
+}
+
+.card {
+    width: min(720px, 100%);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 32px;
+    backdrop-filter: blur(6px);
+    color: var(--fg, #e5e7eb);
+}
+
+.title {
+    font-size: clamp(24px, 4vw, 40px);
+    margin: 0 0 6px 0;
+    font-weight: 800;
+}
+
+.subtitle {
+    margin: 0 0 16px 0;
+    opacity: .85
+}
+
+.theme-default {
+    --bg: #0f172a;
+    --fg: #e2e8f0;
+    --acc: #60a5fa;
+}
+
+.theme-birthday {
+    --bg: #8b5cf6;
+    --fg: #fff7ed;
+    --acc: #f59e0b;
+}
+
+.theme-exam {
+    --bg: #0ea5e9;
+    --fg: #f8fafc;
+    --acc: #022c22;
+}
+
+.theme-launch {
+    --bg: #111827;
+    --fg: #f3f4f6;
+    --acc: #10b981;
+}
+
+.theme-night {
+    --bg: #0b1021;
+    --fg: #d1d5db;
+    --acc: #a78bfa;
 }

@@ -17,9 +17,10 @@ model Moment {
   id         String     @id @default(cuid())
   title      String
   slug       String     @unique
-  targetUtc  DateTime   // 统一存成 UTC
-  timeZone   String     // IANA TZ, e.g. "America/Los_Angeles"
+  targetUtc  DateTime
+  timeZone   String
   visibility Visibility @default(PUBLIC)
+  theme      String     @default("default")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }

@@ -26,14 +26,30 @@ model Moment {
   userId     String?
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   passcodeHash String?
+  rrule      String?
+  rtime      String?
+  currentStreak Int     @default(0)
+  maxStreak     Int     @default(0)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   rules      ReminderRule[]
   jobs       ReminderJob[]
   logs       DeliveryLog[]
+  skips      RecurrenceSkip[]
 
   @@index([visibility])
   @@index([userId, createdAt])
+  @@index([rrule])
+}
+
+model RecurrenceSkip {
+  id            String   @id @default(cuid())
+  momentId      String
+  moment        Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  occurrenceUtc DateTime
+  reason        String?
+  createdAt     DateTime @default(now())
+  @@index([momentId, occurrenceUtc])
 }
 
 enum Visibility {

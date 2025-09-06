@@ -5,6 +5,7 @@ import { localToUtc } from '@/lib/time';
 import bcrypt from 'bcryptjs';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { rruleFromInput, nextOccurrenceUtc } from '@/lib/recurrence';
 
 const THEMES = new Set(['default', 'birthday', 'exam', 'launch', 'night']);
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -54,17 +55,34 @@ export async function POST(req) {
         }
 
         const session = await getServerSession(authOptions);
-   const userId = session?.user?.id || null;
+        const userId = session?.user?.id || null;
 
-   const created = await prisma.moment.create({
+        let rrule = null, rtime = null;
+        if (body.recurrence) {
+            const session = await getServerSession(authOptions);
+            if (!session) return bad('Login required for recurring timers', 401);
+            rrule = rruleFromInput(body.recurrence);
+            rtime = (body.recurrence.time || (localDateTime.split('T')[1]))?.slice(0, 5) || null;
+        }
+
+        const created = await prisma.moment.create({
             data: {
                 title, slug, targetUtc, timeZone, visibility, theme: safeTheme,
                 ownerEmail: email || null,
                 passcodeHash,
-                userId
+                userId,
+                rrule,
+                rtime
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });
+
+        if (created.rrule && created.rtime && created.targetUtc <= new Date()) {
+            const next = nextOccurrenceUtc({ fromUtc: new Date(), rrule: created.rrule, rtime: created.rtime, timeZone });
+            if (next) {
+                await prisma.moment.update({ where: { id: created.id }, data: { targetUtc: next } });
+            }
+        }
 
         if (created.ownerEmail && (rules.seven || rules.three || rules.one || rules.dayOf)) {
             const offsets = [];

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { localToUtc } from '@/lib/time';
 import bcrypt from 'bcryptjs';
+import { rruleFromInput, nextOccurrenceUtc } from '@/lib/recurrence';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +32,7 @@ export async function PATCH(req, { params }) {
         const email = (body.email || '').trim();
         const passcode = (body.passcode || '').trim();
         const rules = body.rules || {};
+        const recurrence = body.recurrence || null;
         const regenerateJobs = Boolean(body.regenerateJobs);
 
         if (!title) return bad('Title is required');
@@ -46,14 +48,33 @@ export async function PATCH(req, { params }) {
         }
         if (visibility !== 'PRIVATE') passcodeHash = null;
 
-        const updated = await prisma.moment.update({
+        let dataToUpdate = {
             where: { id: m.id },
             data: {
                 title, targetUtc, timeZone, theme, visibility,
                 ownerEmail: email || null,
                 passcodeHash
-            },
-            select: { id: true, slug: true, targetUtc: true, timeZone: true }
+            }
+        };
+
+        if (recurrence) {
+            const rrule = rruleFromInput(recurrence);
+            const rtime = (recurrence.time || localDateTime.split('T')[1])?.slice(0, 5) || null;
+            dataToUpdate.data.rrule = rrule;
+            dataToUpdate.data.rtime = rtime;
+            if (rrule && rtime) {
+                const next = nextOccurrenceUtc({ fromUtc: new Date(), rrule, rtime, timeZone });
+                if (next) dataToUpdate.data.targetUtc = next;
+            } else {
+                dataToUpdate.data.rrule = null;
+                dataToUpdate.data.rtime = null;
+                dataToUpdate.data.currentStreak = 0;
+            }
+        }
+
+        const updated = await prisma.moment.update({
+            ...dataToUpdate,
+            select: { id: true, slug: true, targetUtc: true, timeZone: true, rrule: true, rtime: true }
         });
 
         const wantedOffsets = new Set([

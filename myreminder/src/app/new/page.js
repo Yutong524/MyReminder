@@ -27,6 +27,8 @@ export default function NewMomentPage() {
     const [theme, setTheme] = useState('default');
     const [visibility, setVisibility] = useState('PUBLIC');
     const [passcode, setPasscode] = useState('');
+    const [recType, setRecType] = useState('NONE'); // NONE|DAILY|WEEKDAYS|WEEKLY
+    const [wk, setWk] = useState({ MO: false, TU: false, WE: false, TH: false, FR: false, SA: false, SU: false });
 
     useEffect(() => {
         const now = new Date(Date.now() + 60 * 60 * 1000);
@@ -69,6 +71,10 @@ export default function NewMomentPage() {
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
                     visibility,
                     passcode: visibility === 'PRIVATE' ? passcode : undefined,
+                    recurrence: recType === 'NONE' ? undefined : {
+                        type: recType,
+                        days: recType === 'WEEKLY' ? Object.entries(wk).filter(([, v]) => v).map(([k]) => k) : undefined
+                    }
                 }),
             });
 
@@ -231,6 +237,30 @@ export default function NewMomentPage() {
                         <label><input type="checkbox" checked={rule0} onChange={(e) => setRule0(e.target.checked)} /> Day-of</label>
                     </div>
                     <small style={{ opacity: .75 }}>Leave email empty if you don’t want reminders.</small>
+                </fieldset>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Recurring (login required)</legend>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <label><input type="radio" name="rec" checked={recType === 'NONE'} onChange={() => setRecType('NONE')} /> None</label>
+                        <label><input type="radio" name="rec" checked={recType === 'DAILY'} onChange={() => setRecType('DAILY')} /> Daily</label>
+                        <label><input type="radio" name="rec" checked={recType === 'WEEKDAYS'} onChange={() => setRecType('WEEKDAYS')} /> Weekdays</label>
+                        <label><input type="radio" name="rec" checked={recType === 'WEEKLY'} onChange={() => setRecType('WEEKLY')} /> Weekly</label>
+                    </div>
+                    {recType === 'WEEKLY' && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                            {['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map(d => (
+                                <label key={d}>
+                                    <input
+                                        type="checkbox"
+                                        checked={wk[d]}
+                                        onChange={e => setWk({ ...wk, [d]: e.target.checked })}
+                                    /> {d}
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                    <small style={{ opacity: .75 }}>Anonymous users can't enable recurring. You'll get a login-required error if not signed in.</small>
                 </fieldset>
 
                 <button

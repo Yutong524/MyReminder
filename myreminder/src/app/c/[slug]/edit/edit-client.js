@@ -17,6 +17,12 @@ export default function EditForm({ slug, initial }) {
     const [rule1, setRule1] = useState(initial.rules.one);
     const [rule0, setRule0] = useState(initial.rules.dayOf);
     const [submitting, setSubmitting] = useState(false);
+    const [recType, setRecType] = useState(initial.recurrence.type || 'NONE');
+    const [wk, setWk] = useState(() => {
+        const obj = { MO: false, TU: false, WE: false, TH: false, FR: false, SA: false, SU: false };
+        (initial.recurrence.days || []).forEach(d => obj[d] = true);
+        return obj;
+    });
     const [err, setErr] = useState(null);
 
     const localDateTime = useMemo(() => (date && time ? `${date}T${time}` : ''), [date, time]);
@@ -39,7 +45,12 @@ export default function EditForm({ slug, initial }) {
                     passcode: visibility === 'PRIVATE' ? passcode : undefined,
                     email,
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
-                    regenerateJobs: true
+                    regenerateJobs: true,
+                    recurrence: recType === 'NONE' ? undefined : {
+                        type: recType,
+                        days: recType === 'WEEKLY' ? Object.entries(wk).filter(([, v]) => v).map(([k]) => k) : undefined
+                    }
+
                 })
             });
             const data = await res.json().catch(() => ({}));
@@ -51,6 +62,36 @@ export default function EditForm({ slug, initial }) {
 
     return (
         <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+
+            <fieldset style={{ border: '1px solid rgba(0,0,0,.1)', padding: 12, borderRadius: 8 }}>
+                <legend>Recurring</legend>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <label><input type="radio" name="rec" checked={recType === 'NONE'} onChange={() => setRecType('NONE')} /> None</label>
+                    <label><input type="radio" name="rec" checked={recType === 'DAILY'} onChange={() => setRecType('DAILY')} /> Daily</label>
+                    <label><input type="radio" name="rec" checked={recType === 'WEEKDAYS'} onChange={() => setRecType('WEEKDAYS')} /> Weekdays</label>
+                    <label><input type="radio" name="rec" checked={recType === 'WEEKLY'} onChange={() => setRecType('WEEKLY')} /> Weekly</label>
+                </div>
+                {recType === 'WEEKLY' && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                        {['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map(d => (
+                            <label key={d}><input type="checkbox" checked={wk[d]} onChange={e => setWk({ ...wk, [d]: e.target.checked })} /> {d}</label>
+                        ))}
+                    </div>
+                )}
+                <small style={{ opacity: .75 }}>Current streak: {initial.streak.current} · Best: {initial.streak.max}</small>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <button type="button" onClick={async () => {
+                        await fetch(`/api/moments/${slug}/recurring/skip`, { method: 'POST' });
+                        alert('Next occurrence will be skipped.');
+                    }}>Skip next</button>
+                    <button type="button" onClick={async () => {
+                        const r = await fetch(`/api/moments/${slug}/recurring/done`, { method: 'POST' });
+                        if (r.ok) alert('Marked done and rolled to next.');
+                        else alert('Failed to mark done.');
+                    }}>Mark done</button>
+                </div>
+            </fieldset>
+
             <label>Title
                 <input value={title} onChange={e => setTitle(e.target.value)} required style={{ width: '100%', padding: 8 }} />
             </label>

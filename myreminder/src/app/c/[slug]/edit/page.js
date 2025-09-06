@@ -16,11 +16,12 @@ export default async function EditPage({ params }) {
         select: {
             id: true, userId: true, title: true, slug: true, targetUtc: true, timeZone: true,
             theme: true, visibility: true, ownerEmail: true,
+            rrule: true, rtime: true, currentStreak: true, maxStreak: true,
             rules: { where: { active: true }, select: { offsetMinutes: true } }
         }
     });
     if (!m) return notFound();
-    if (m.userId !== session.user.id) redirect('/dashboard');     
+    if (m.userId !== session.user.id) redirect('/dashboard');
 
     const initial = {
         title: m.title,
@@ -35,7 +36,13 @@ export default async function EditPage({ params }) {
             three: m.rules.some(r => r.offsetMinutes === -3 * 24 * 60),
             one: m.rules.some(r => r.offsetMinutes === -1 * 24 * 60),
             dayOf: m.rules.some(r => r.offsetMinutes === 0),
-        }
+        },
+        recurrence: m.rrule ? (
+            m.rrule.includes('DAILY') ? { type: 'DAILY' } :
+                m.rrule.includes('BYDAY=MO,TU,WE,TH,FR') ? { type: 'WEEKDAYS' } :
+                    { type: 'WEEKLY', days: (m.rrule.match(/BYDAY=([A-Z,]+)/)?.[1] || '').split(',').filter(Boolean) }
+        ) : { type: 'NONE' },
+        streak: { current: m.currentStreak || 0, max: m.maxStreak || 0 }
     };
 
     return (

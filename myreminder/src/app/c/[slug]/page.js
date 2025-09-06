@@ -46,7 +46,7 @@ export default async function CountdownPage({ params }) {
     return (
         <div className={`theme-${m.theme} page-wrap`}>
             <main className="card">
-                <ShareControls slug={slug} title={m.title} />
+                <ShareControls slug={slug} title={m.title} theme={m.theme} />
                 <h1 className="title">{m.title}</h1>
                 <p className="subtitle">
                     Time left · {humanizeRemaining(m.targetUtc.toISOString())}

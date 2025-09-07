@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 import { cookieNameFor, verifyAccessToken } from '@/lib/access';
 import AccessGateClient from './passcode-client';
 import CheerGuestbook from './social-client';
+import AnalyticsTracker from './analytics-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ export default async function CountdownPage({ params }) {
 
     return (
         <div className={`theme-${m.theme} page-wrap`}>
+            <AnalyticsTracker slug={slug} />
             <main className="card">
                 <ShareControls slug={slug} title={m.title} theme={m.theme} />
                 <h1 className="title">{m.title}</h1>

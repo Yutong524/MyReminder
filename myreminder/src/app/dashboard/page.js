@@ -12,7 +12,16 @@ export default async function Dashboard() {
     const moments = await prisma.moment.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
-        select: { id: true, title: true, slug: true, createdAt: true, visibility: true },
+        select: {
+            id: true,
+            title: true,
+            slug: true,
+            createdAt: true,
+            visibility: true,
+            views: true,
+            uniques: true,
+            cheerCount: true,
+        },
     });
 
     return (
@@ -31,10 +40,15 @@ export default async function Dashboard() {
                                 <a href={`/c/${m.slug}`}>{m.title}</a>
                                 <div style={{ fontSize: 12, opacity: .7 }}>
                                     /c/{m.slug} · {m.visibility}
+                                    {typeof m.views === 'number' && typeof m.uniques === 'number' && (
+                                        <> · 👁 {m.views} views / {m.uniques} uniques</>
+                                    )}
+                                    {typeof m.cheerCount === 'number' && <> · {m.cheerCount}</>}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <a href={`/c/${m.slug}/edit`}>Edit</a>
+                                <a href={`/api/moments/${m.slug}/analytics`} rel="nofollow">Analytics</a>
                                 <a href={`/api/moments/${m.slug}/export`} rel="nofollow">Export</a>
                                 <form action={`/api/moments/${m.slug}/delete`} method="post">
                                     <button>Delete</button>

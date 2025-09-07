@@ -9,38 +9,43 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model Moment {
-  id         String     @id @default(cuid())
-  title      String
-  slug       String     @unique
-  targetUtc  DateTime
-  timeZone   String
-  visibility Visibility @default(PUBLIC)
-  theme      String     @default("default")
-  ownerEmail String?
-  userId     String?
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  passcodeHash String?
-  cheerCount     Int              @default(0)
-  notifyOnCheer  Boolean          @default(false)
-  notifyOnNote   Boolean          @default(false)
-  cheers         Cheer[]
-  guestbook      GuestbookEntry[]
-  rrule      String?
-  rtime      String?
-  currentStreak Int     @default(0)
-  maxStreak     Int     @default(0)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  rules      ReminderRule[]
-  jobs       ReminderJob[]
-  logs       DeliveryLog[]
-  skips      RecurrenceSkip[]
+  id            String           @id @default(cuid())
+  title         String
+  slug          String           @unique
+  targetUtc     DateTime
+  timeZone      String
+  visibility    Visibility       @default(PUBLIC)
+  theme         String           @default("default")
+  ownerEmail    String?
+  userId        String?
+  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  passcodeHash  String?
+  views         Int              @default(0)
+  uniques       Int              @default(0)
+  viewDays      ViewDay[]
+  refStats      ReferrerStat[]
+  uniqueSeens   UniqueSeen[]
+  cheerCount    Int              @default(0)
+  notifyOnCheer Boolean          @default(false)
+  notifyOnNote  Boolean          @default(false)
+  cheers        Cheer[]
+  guestbook     GuestbookEntry[]
+  rrule         String?
+  rtime         String?
+  currentStreak Int              @default(0)
+  maxStreak     Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  rules         ReminderRule[]
+  jobs          ReminderJob[]
+  logs          DeliveryLog[]
+  skips         RecurrenceSkip[]
 
   @@index([visibility])
   @@index([userId, createdAt])
@@ -54,6 +59,7 @@ model RecurrenceSkip {
   occurrenceUtc DateTime
   reason        String?
   createdAt     DateTime @default(now())
+
   @@index([momentId, occurrenceUtc])
 }
 
@@ -64,14 +70,14 @@ enum Visibility {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  accounts       Account[]
-  sessions       Session[]
-  moments        Moment[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  moments       Moment[]
 }
 
 model Account {
@@ -88,6 +94,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
 }
 
@@ -103,6 +110,7 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@unique([identifier, token])
 }
 
@@ -111,14 +119,14 @@ enum Channel {
 }
 
 model ReminderRule {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   momentId      String
-  moment        Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  channel       Channel  @default(EMAIL)
+  moment        Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  channel       Channel       @default(EMAIL)
   offsetMinutes Int
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   jobs          ReminderJob[]
 }
 
@@ -133,37 +141,37 @@ enum JobStatus {
 }
 
 model ReminderJob {
-  id               String     @id @default(cuid())
-  momentId         String
-  ruleId           String
-  moment           Moment     @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  rule             ReminderRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  scheduledAt      DateTime
-  status           JobStatus  @default(PENDING)
-  attempts         Int        @default(0)
-  lastError        String?
-  recipientEmail   String
-  subject          String
-  body             String
+  id                String        @id @default(cuid())
+  momentId          String
+  ruleId            String
+  moment            Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  rule              ReminderRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  scheduledAt       DateTime
+  status            JobStatus     @default(PENDING)
+  attempts          Int           @default(0)
+  lastError         String?
+  recipientEmail    String
+  subject           String
+  body              String
   providerMessageId String?
-  sentAt           DateTime?
-  deliveredAt      DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  logs             DeliveryLog[]
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  logs              DeliveryLog[]
 
   @@index([status, scheduledAt])
 }
 
 model DeliveryLog {
-  id         String    @id @default(cuid())
-  momentId   String
-  jobId      String
-  moment     Moment    @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  job        ReminderJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  status     JobStatus
-  message    String?
-  createdAt  DateTime  @default(now())
+  id        String      @id @default(cuid())
+  momentId  String
+  jobId     String
+  moment    Moment      @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  job       ReminderJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status    JobStatus
+  message   String?
+  createdAt DateTime    @default(now())
 }
 
 model Cheer {
@@ -172,6 +180,7 @@ model Cheer {
   moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
   ipHash    String
   createdAt DateTime @default(now())
+
   @@index([momentId, ipHash, createdAt])
 }
 
@@ -184,5 +193,45 @@ model GuestbookEntry {
   ipHash    String?
   notified  Boolean  @default(false)
   createdAt DateTime @default(now())
+
   @@index([momentId, createdAt])
+}
+
+model ViewDay {
+  id        String   @id @default(cuid())
+  momentId  String
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  day       DateTime
+  views     Int      @default(0)
+  uniques   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([momentId, day], name: "momentId_day")
+  @@index([momentId, day])
+}
+
+model ReferrerStat {
+  id        String   @id @default(cuid())
+  momentId  String
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  host      String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([momentId, host], name: "momentId_host")
+  @@index([momentId, count])
+}
+
+model UniqueSeen {
+  id        String   @id @default(cuid())
+  momentId  String
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  day       DateTime
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@unique([momentId, day, ipHash])
+  @@index([momentId, day])
 }

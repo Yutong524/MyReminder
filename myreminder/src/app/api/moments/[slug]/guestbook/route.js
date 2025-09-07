@@ -2,7 +2,6 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
-import { sendOwnerMail } from '@/lib/mailer';
 import { sendEmail } from '@/lib/email';
 
 function ipFrom(req) {
@@ -45,7 +44,7 @@ export async function POST(req, { params }) {
         data: { momentId: m.id, name: name || null, message, ipHash },
         select: { id: true, name: true, message: true, createdAt: true }
     });
-    
+
     if (m.notifyOnNote && m.ownerEmail) {
         (async () => {
             try {

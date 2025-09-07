@@ -58,7 +58,18 @@ export default async function CountdownPage({ params }) {
                     Event time: {formatInIana(m.targetUtc.toISOString(), m.timeZone)} ({m.timeZone}) ·
                     <span style={{ marginLeft: 6 }}>Your local: {formatInLocal(m.targetUtc.toISOString())}</span>
                 </p>
-                <Countdown targetIso={m.targetUtc.toISOString()} />
+
+                <Countdown
+                    targetIso={m.targetUtc.toISOString()}
+                    audio={{
+                        bgmUrl: m.bgmUrl || null,
+                        bgmLoop: m.bgmLoop,
+                        bgmVolume: m.bgmVolume,
+                        endUrl: m.endSoundUrl || (m.endSoundKey && m.endSoundKey !== 'none' ? `/sounds/${m.endSoundKey}.mp3` : null),
+                        endVolume: m.endSoundVolume
+                    }}
+                />
+
                 <CheerGuestbook
                     slug={slug}
                     initialCount={m.cheerCount}
@@ -90,7 +101,9 @@ export async function generateMetadata({ params }) {
         where: { slug },
         select: {
             title: true, targetUtc: true, theme: true, visibility: true,
-            cheerCount: true
+            cheerCount: true,
+            bgmUrl: true, bgmLoop: true, bgmVolume: true,
+            endSoundKey: true, endSoundUrl: true, endSoundVolume: true
         }
     });
     if (!m) return {};

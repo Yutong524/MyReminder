@@ -27,6 +27,14 @@ export default function NewMomentPage() {
     const [theme, setTheme] = useState('default');
     const [visibility, setVisibility] = useState('PUBLIC');
     const [passcode, setPasscode] = useState('');
+    const [bgmUrl, setBgmUrl] = useState('');
+    const [bgmFile, setBgmFile] = useState(null);
+    const [bgmLoop, setBgmLoop] = useState(true);
+    const [bgmVolume, setBgmVolume] = useState(50);
+    const [endKey, setEndKey] = useState('none'); // 'none'|'bell'|'chime'|'beep'|'custom'
+    const [endUrl, setEndUrl] = useState('');
+    const [endFile, setEndFile] = useState(null);
+    const [endVolume, setEndVolume] = useState(80);
     const [recType, setRecType] = useState('NONE'); // NONE|DAILY|WEEKDAYS|WEEKLY
     const [wk, setWk] = useState({ MO: false, TU: false, WE: false, TH: false, FR: false, SA: false, SU: false });
 
@@ -59,6 +67,22 @@ export default function NewMomentPage() {
         setErr(null);
         setSubmitting(true);
         try {
+
+            let finalBgmUrl = bgmUrl.trim();
+            if (!finalBgmUrl && bgmFile) {
+                const fd = new FormData(); fd.append('file', bgmFile);
+                const up = await fetch('/api/upload/audio', { method: 'POST', body: fd });
+                const uj = await up.json(); if (!up.ok) throw new Error(uj?.error || 'Upload failed');
+                finalBgmUrl = uj.url;
+            }
+            let finalEndUrl = (endKey === 'custom') ? endUrl.trim() : '';
+            if (endKey === 'custom' && !finalEndUrl && endFile) {
+                const fd2 = new FormData(); fd2.append('file', endFile);
+                const up2 = await fetch('/api/upload/audio', { method: 'POST', body: fd2 });
+                const uj2 = await up2.json(); if (!up2.ok) throw new Error(uj2?.error || 'Upload failed');
+                finalEndUrl = uj2.url;
+            }
+
             const res = await fetch('/api/moments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,6 +95,12 @@ export default function NewMomentPage() {
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
                     visibility,
                     passcode: visibility === 'PRIVATE' ? passcode : undefined,
+                    bgmUrl: finalBgmUrl || undefined,
+                    bgmLoop,
+                    bgmVolume,
+                    endSoundKey: endKey === 'custom' ? undefined : endKey, // none|bell|chime|beep
+                    endSoundUrl: endKey === 'custom' ? finalEndUrl : undefined,
+                    endSoundVolume: endVolume,
                     recurrence: recType === 'NONE' ? undefined : {
                         type: recType,
                         days: recType === 'WEEKLY' ? Object.entries(wk).filter(([, v]) => v).map(([k]) => k) : undefined
@@ -261,6 +291,53 @@ export default function NewMomentPage() {
                         </div>
                     )}
                     <small style={{ opacity: .75 }}>Anonymous users can't enable recurring. You'll get a login-required error if not signed in.</small>
+                </fieldset>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Audio</legend>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        <div>
+                            <strong>Background music</strong>
+                            <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+                                <input placeholder="BGM URL (optional)"
+                                    value={bgmUrl}
+                                    onChange={(e) => setBgmUrl(e.target.value)}
+                                    style={{ width: '100%', padding: 8 }} />
+                                <input type="file" accept="audio/*" onChange={e => setBgmFile(e.target.files?.[0] || null)} />
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input type="checkbox" checked={bgmLoop} onChange={e => setBgmLoop(e.target.checked)} />
+                                    Loop
+                                </label>
+                                <label>Volume: {bgmVolume}
+                                    <input type="range" min="0" max="100" value={bgmVolume} onChange={e => setBgmVolume(Number(e.target.value))} />
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <strong>End sound</strong>
+                            <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+                                <select value={endKey} onChange={e => setEndKey(e.target.value)} style={{ padding: 8 }}>
+                                    <option value="none">None</option>
+                                    <option value="bell">Bell (built-in)</option>
+                                    <option value="chime">Chime (built-in)</option>
+                                    <option value="beep">Beep (built-in)</option>
+                                    <option value="custom">Custom (URL or upload)</option>
+                                </select>
+                                {endKey === 'custom' && (
+                                    <>
+                                        <input placeholder="Custom end sound URL"
+                                            value={endUrl}
+                                            onChange={(e) => setEndUrl(e.target.value)}
+                                            style={{ width: '100%', padding: 8 }} />
+                                        <input type="file" accept="audio/*" onChange={e => setEndFile(e.target.files?.[0] || null)} />
+                                    </>
+                                )}
+                                <label>Volume: {endVolume}
+                                    <input type="range" min="0" max="100" value={endVolume} onChange={e => setEndVolume(Number(e.target.value))} />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </fieldset>
 
                 <button

@@ -9,6 +9,7 @@ import { rruleFromInput, nextOccurrenceUtc } from '@/lib/recurrence';
 
 const THEMES = new Set(['default', 'birthday', 'exam', 'launch', 'night']);
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const BUILTIN_END_SOUNDS = new Set(['none', 'bell', 'chime', 'beep']);
 
 function bad(msg, code = 400) {
     return NextResponse.json({ error: msg }, { status: code });
@@ -17,6 +18,19 @@ function bad(msg, code = 400) {
 export async function POST(req) {
     try {
         const body = await req.json();
+
+        let bgmUrl = (body.bgmUrl || '').trim() || null;
+        const bgmLoop = body.bgmLoop !== false;
+        const bgmVolume = Math.max(0, Math.min(100, Number(body.bgmVolume ?? 50)));
+        const endSoundKey = (body.endSoundKey || '').trim().toLowerCase() || null;
+        let endSoundUrl = (body.endSoundUrl || '').trim() || null;
+        const endSoundVolume = Math.max(0, Math.min(100, Number(body.endSoundVolume ?? 80)));
+
+        if (endSoundKey && !BUILTIN_END_SOUNDS.has(endSoundKey)) {
+            return NextResponse.json({ error: 'Invalid end sound' }, { status: 400 });
+        }
+        if (endSoundKey && endSoundKey !== 'none') endSoundUrl = null;
+
         const title = (body.title || '').trim();
         const localDateTime = (body.localDateTime || '').trim();
         const timeZone = (body.timeZone || '').trim();
@@ -72,7 +86,9 @@ export async function POST(req) {
                 passcodeHash,
                 userId,
                 rrule,
-                rtime
+                rtime,
+                bgmUrl, bgmLoop, bgmVolume,
+                endSoundKey, endSoundUrl, endSoundVolume
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });

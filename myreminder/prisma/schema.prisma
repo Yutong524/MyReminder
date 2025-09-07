@@ -26,6 +26,12 @@ model Moment {
   userId        String?
   user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   passcodeHash  String?
+  bgmUrl        String?
+  bgmLoop       Boolean          @default(true)
+  bgmVolume     Int              @default(50)   // 0-100
+  endSoundKey   String?
+  endSoundUrl   String?
+  endSoundVolume Int             @default(80)   // 0-100
   views         Int              @default(0)
   uniques       Int              @default(0)
   viewDays      ViewDay[]

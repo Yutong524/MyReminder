@@ -32,6 +32,14 @@ export async function PATCH(req, { params }) {
         const email = (body.email || '').trim();
         const passcode = (body.passcode || '').trim();
         const rules = body.rules || {};
+
+        const bgmUrl = (body.bgmUrl || '').trim() || null;
+        const bgmLoop = body.bgmLoop !== false;
+        const bgmVolume = Math.max(0, Math.min(100, Number(body.bgmVolume ?? 50)));
+        const endSoundKey = (body.endSoundKey || '').trim().toLowerCase() || null;
+        const endSoundUrl = (body.endSoundUrl || '').trim() || null;
+        const endSoundVolume = Math.max(0, Math.min(100, Number(body.endSoundVolume ?? 80)));
+
         const notifyOnCheer = body.notifyOnCheer === true;
         const notifyOnNote = body.notifyOnNote === true;
         const recurrence = body.recurrence || null;
@@ -57,7 +65,11 @@ export async function PATCH(req, { params }) {
                 ownerEmail: email || null,
                 passcodeHash,
                 notifyOnCheer,
-                notifyOnNote
+                notifyOnNote,
+                bgmUrl, bgmLoop, bgmVolume,
+                endSoundKey, 
+                endSoundUrl: endSoundKey && endSoundKey !== 'none' ? null : endSoundUrl,
+                endSoundVolume,
             }
         };
 

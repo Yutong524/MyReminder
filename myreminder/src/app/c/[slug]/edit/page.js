@@ -14,10 +14,25 @@ export default async function EditPage({ params }) {
     const m = await prisma.moment.findUnique({
         where: { slug },
         select: {
-            id: true, userId: true, title: true, slug: true, targetUtc: true, timeZone: true,
-            theme: true, visibility: true, ownerEmail: true,
-            rrule: true, rtime: true, currentStreak: true, maxStreak: true,
-            rules: { where: { active: true }, select: { offsetMinutes: true } }
+            id: true, 
+            userId: true, 
+            title: true, 
+            slug: true, 
+            targetUtc: true, 
+            timeZone: true,
+            theme: true, 
+            visibility: true, 
+            ownerEmail: true,
+            rrule: true, 
+            rtime: true, 
+            currentStreak: true, 
+            maxStreak: true,
+            rules: { 
+                where: { active: true }, 
+                select: { offsetMinutes: true } 
+            },
+            notifyOnCheer: true, 
+            notifyOnNote: true,
         }
     });
     if (!m) return notFound();

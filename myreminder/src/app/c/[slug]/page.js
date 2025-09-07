@@ -6,6 +6,7 @@ import ShareControls from './share-client';
 import { cookies } from 'next/headers';
 import { cookieNameFor, verifyAccessToken } from '@/lib/access';
 import AccessGateClient from './passcode-client';
+import CheerGuestbook from './social-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,10 @@ export default async function CountdownPage({ params }) {
                     <span style={{ marginLeft: 6 }}>Your local: {formatInLocal(m.targetUtc.toISOString())}</span>
                 </p>
                 <Countdown targetIso={m.targetUtc.toISOString()} />
+                <CheerGuestbook
+                    slug={slug}
+                    initialCount={m.cheerCount}
+                />
 
                 {logs.length > 0 && (
                     <div style={{ marginTop: 24 }}>
@@ -80,7 +85,11 @@ export async function generateMetadata({ params }) {
     const { slug } = await params;
 
     const m = await prisma.moment.findUnique({
-        where: { slug }, select: { title: true, targetUtc: true, timeZone: true, theme: true, visibility: true }
+        where: { slug },
+        select: {
+            title: true, targetUtc: true, theme: true, visibility: true,
+            cheerCount: true
+        }
     });
     if (!m) return {};
 
@@ -98,11 +107,11 @@ export async function generateMetadata({ params }) {
     const robots = m.visibility === 'UNLISTED' ? { index: false, follow: false } : undefined;
     return {
         title, description, robots,
-        openGraph: { 
-            title, 
-            description, 
-            images: [ogImage], 
-            type: 'website' 
+        openGraph: {
+            title,
+            description,
+            images: [ogImage],
+            type: 'website'
         },
         twitter: {
             card: 'summary_large_image',

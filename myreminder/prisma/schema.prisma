@@ -26,6 +26,11 @@ model Moment {
   userId     String?
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   passcodeHash String?
+  cheerCount     Int              @default(0)
+  notifyOnCheer  Boolean          @default(false)
+  notifyOnNote   Boolean          @default(false)
+  cheers         Cheer[]
+  guestbook      GuestbookEntry[]
   rrule      String?
   rtime      String?
   currentStreak Int     @default(0)
@@ -159,4 +164,25 @@ model DeliveryLog {
   status     JobStatus
   message    String?
   createdAt  DateTime  @default(now())
+}
+
+model Cheer {
+  id        String   @id @default(cuid())
+  momentId  String
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  ipHash    String
+  createdAt DateTime @default(now())
+  @@index([momentId, ipHash, createdAt])
+}
+
+model GuestbookEntry {
+  id        String   @id @default(cuid())
+  momentId  String
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  name      String?
+  message   String
+  ipHash    String?
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([momentId, createdAt])
 }

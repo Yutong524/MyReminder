@@ -32,6 +32,8 @@ export async function PATCH(req, { params }) {
         const email = (body.email || '').trim();
         const passcode = (body.passcode || '').trim();
         const rules = body.rules || {};
+        const notifyOnCheer = body.notifyOnCheer === true;
+        const notifyOnNote = body.notifyOnNote === true;
         const recurrence = body.recurrence || null;
         const regenerateJobs = Boolean(body.regenerateJobs);
 
@@ -53,7 +55,9 @@ export async function PATCH(req, { params }) {
             data: {
                 title, targetUtc, timeZone, theme, visibility,
                 ownerEmail: email || null,
-                passcodeHash
+                passcodeHash,
+                notifyOnCheer,
+                notifyOnNote
             }
         };
 

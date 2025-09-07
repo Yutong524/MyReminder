@@ -17,6 +17,8 @@ export default function EditForm({ slug, initial }) {
     const [rule1, setRule1] = useState(initial.rules.one);
     const [rule0, setRule0] = useState(initial.rules.dayOf);
     const [submitting, setSubmitting] = useState(false);
+    const [notifyCheer, setNotifyCheer] = useState(initial.notifyOnCheer || false);
+    const [notifyNote, setNotifyNote] = useState(initial.notifyOnNote || false);
     const [recType, setRecType] = useState(initial.recurrence.type || 'NONE');
     const [wk, setWk] = useState(() => {
         const obj = { MO: false, TU: false, WE: false, TH: false, FR: false, SA: false, SU: false };
@@ -46,6 +48,8 @@ export default function EditForm({ slug, initial }) {
                     email,
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
                     regenerateJobs: true,
+                    notifyOnCheer: notifyCheer,
+                    notifyOnNote: notifyNote,
                     recurrence: recType === 'NONE' ? undefined : {
                         type: recType,
                         days: recType === 'WEEKLY' ? Object.entries(wk).filter(([, v]) => v).map(([k]) => k) : undefined
@@ -145,6 +149,19 @@ export default function EditForm({ slug, initial }) {
                     <label><input type="checkbox" checked={rule0} onChange={e => setRule0(e.target.checked)} /> Day-of</label>
                 </div>
                 <small style={{ opacity: .75 }}>Leave email empty to disable email reminders.</small>
+            </fieldset>
+
+            <fieldset style={{ border: '1px solid rgba(0,0,0,.1)', padding: 12, borderRadius: 8 }}>
+                <legend>Owner notifications</legend>
+                <label style={{ display: 'block' }}>
+                    <input type="checkbox" checked={notifyCheer} onChange={e => setNotifyCheer(e.target.checked)} />
+                    {' '}Email me when someone cheers
+                </label>
+                <label style={{ display: 'block', marginTop: 6 }}>
+                    <input type="checkbox" checked={notifyNote} onChange={e => setNotifyNote(e.target.checked)} />
+                    {' '}Email me on new guestbook note
+                </label>
+                <small style={{ opacity: .7 }}>Requires a valid email set above.</small>
             </fieldset>
 
             <button disabled={submitting || !canSubmit}>{submitting ? 'Saving…' : 'Save changes'}</button>

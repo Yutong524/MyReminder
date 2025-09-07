@@ -26,6 +26,8 @@ model Moment {
   userId        String?
   user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   passcodeHash  String?
+  slackWebhookUrl String?
+  smsPhone        String?      // E.164 e.g. +14155551234
   bgmUrl        String?
   bgmLoop       Boolean          @default(true)
   bgmVolume     Int              @default(50)   // 0-100
@@ -122,6 +124,8 @@ model VerificationToken {
 
 enum Channel {
   EMAIL
+  SLACK
+  SMS
 }
 
 model ReminderRule {
@@ -153,10 +157,13 @@ model ReminderJob {
   moment            Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
   rule              ReminderRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   scheduledAt       DateTime
+  channel           Channel       @default(EMAIL)
   status            JobStatus     @default(PENDING)
   attempts          Int           @default(0)
   lastError         String?
-  recipientEmail    String
+  recipientEmail    String?
+  recipientSlackWebhook String?
+  recipientPhone    String?
   subject           String
   body              String
   providerMessageId String?
@@ -167,6 +174,7 @@ model ReminderJob {
   logs              DeliveryLog[]
 
   @@index([status, scheduledAt])
+  @@index([channel, status, scheduledAt])
 }
 
 model DeliveryLog {

@@ -18,6 +18,8 @@ export default function NewMomentPage() {
     const [time, setTime] = useState('09:00');
     const [timeZone, setTimeZone] = useState(detectTZ());
     const [email, setEmail] = useState('');
+    const [slackWebhookUrl, setSlackWebhookUrl] = useState('');
+    const [smsPhone, setSmsPhone] = useState('');
     const [rule7, setRule7] = useState(true);
     const [rule3, setRule3] = useState(true);
     const [rule1, setRule1] = useState(true);
@@ -92,6 +94,8 @@ export default function NewMomentPage() {
                     timeZone,
                     theme,
                     email,
+                    slackWebhookUrl,
+                    smsPhone,
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
                     visibility,
                     passcode: visibility === 'PRIVATE' ? passcode : undefined,
@@ -338,6 +342,34 @@ export default function NewMomentPage() {
                             </div>
                         </div>
                     </div>
+                </fieldset>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Reminder (Slack)</legend>
+                    <label style={{ display: 'block', marginBottom: 8 }}>
+                        Channel Webhook URL
+                        <input
+                            value={slackWebhookUrl}
+                            onChange={(e) => setSlackWebhookUrl(e.target.value)}
+                            placeholder="https://hooks.slack.com/services/..."
+                            style={{ width: '100%', padding: 8, marginTop: 4 }}
+                        />
+                    </label>
+                    <small style={{ opacity: .75 }}>Paste an Incoming Webhook URL of your Slack channel.</small>
+                </fieldset>
+
+                <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                    <legend>Reminder (SMS)</legend>
+                    <label style={{ display: 'block', marginBottom: 8 }}>
+                        Phone number
+                        <input
+                            value={smsPhone}
+                            onChange={(e) => setSmsPhone(e.target.value)}
+                            placeholder="+14155551234"
+                            style={{ width: '100%', padding: 8, marginTop: 4 }}
+                        />
+                    </label>
+                    <small style={{ opacity: .75 }}>Use E.164 format. Requires server Twilio credentials.</small>
                 </fieldset>
 
                 <button

@@ -38,6 +38,8 @@ export async function POST(req) {
         const theme = (body.theme || 'default').trim().toLowerCase();
         const safeTheme = THEMES.has(theme) ? theme : 'default';
         const email = (body.email || '').trim();
+        const slackWebhookUrl = (body.slackWebhookUrl || '').trim() || null;
+        const smsPhone = (body.smsPhone || '').trim() || null;
         const rules = body.rules || {};
         const passcode = (body.passcode || '').trim();
 
@@ -88,10 +90,64 @@ export async function POST(req) {
                 rrule,
                 rtime,
                 bgmUrl, bgmLoop, bgmVolume,
-                endSoundKey, endSoundUrl, endSoundVolume
+                endSoundKey, endSoundUrl, endSoundVolume,
+                slackWebhookUrl, smsPhone, ownerEmail: email || null
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });
+
+        const rulesReq = body.rules || {};
+        const offsets = [];
+        if (rulesReq.seven) offsets.push(-10080);
+        if (rulesReq.three) offsets.push(-4320);
+        if (rulesReq.one) offsets.push(-1440);
+        if (rulesReq.dayOf) offsets.push(0);
+
+        const ruleCreates = [];
+        function makeJobs({ channel, target, subject, bodyText }) {
+            return offsets.map((mins) => {
+                const when = new Date(new Date(created.targetUtc).getTime() + mins * 60 * 1000);
+                const base = {
+                    momentId: created.id,
+                    scheduledAt: when,
+                    channel,
+                    status: 'PENDING',
+                    subject,
+                    body: bodyText,
+                };
+                if (channel === 'EMAIL') return { ...base, recipientEmail: target };
+                if (channel === 'SLACK') return { ...base, recipientSlackWebhook: target };
+                if (channel === 'SMS') return { ...base, recipientPhone: target };
+                return base;
+            });
+        }
+
+        const subject = `Reminder: ${created.title}`;
+        const bodyText = `Reminder for "${created.title}". Open: ${BASE_URL}/c/${created.slug}`;
+
+        if (email) {
+            const rule = await prisma.reminderRule.create({
+                data: { momentId: created.id, channel: 'EMAIL', offsetMinutes: 0, active: true }
+            });
+            ruleCreates.push(rule);
+            await prisma.reminderJob.createMany({ data: makeJobs({ channel: 'EMAIL', target: email, subject, bodyText }) });
+        }
+
+        if (slackWebhookUrl) {
+            const rule = await prisma.reminderRule.create({
+                data: { momentId: created.id, channel: 'SLACK', offsetMinutes: 0, active: true }
+            });
+            ruleCreates.push(rule);
+            await prisma.reminderJob.createMany({ data: makeJobs({ channel: 'SLACK', target: slackWebhookUrl, subject, bodyText }) });
+        }
+
+        if (smsPhone) {
+            const rule = await prisma.reminderRule.create({
+                data: { momentId: created.id, channel: 'SMS', offsetMinutes: 0, active: true }
+            });
+            ruleCreates.push(rule);
+            await prisma.reminderJob.createMany({ data: makeJobs({ channel: 'SMS', target: smsPhone, subject, bodyText }) });
+        }
 
         if (created.rrule && created.rtime && created.targetUtc <= new Date()) {
             const next = nextOccurrenceUtc({ fromUtc: new Date(), rrule: created.rrule, rtime: created.rtime, timeZone });

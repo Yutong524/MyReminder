@@ -30,6 +30,8 @@ export async function PATCH(req, { params }) {
         const theme = (body.theme || 'default').trim();
         const visibility = (body.visibility || 'PUBLIC').toUpperCase();
         const email = (body.email || '').trim();
+        const slackWebhookUrl = (body.slackWebhookUrl || '').trim() || null;
+        const smsPhone = (body.smsPhone || '').trim() || null;
         const passcode = (body.passcode || '').trim();
         const rules = body.rules || {};
 
@@ -63,11 +65,13 @@ export async function PATCH(req, { params }) {
             data: {
                 title, targetUtc, timeZone, theme, visibility,
                 ownerEmail: email || null,
+                slackWebhookUrl,
+                smsPhone,
                 passcodeHash,
                 notifyOnCheer,
                 notifyOnNote,
                 bgmUrl, bgmLoop, bgmVolume,
-                endSoundKey, 
+                endSoundKey,
                 endSoundUrl: endSoundKey && endSoundKey !== 'none' ? null : endSoundUrl,
                 endSoundVolume,
             }

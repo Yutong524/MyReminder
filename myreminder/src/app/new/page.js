@@ -20,6 +20,7 @@ export default function NewMomentPage() {
     const [email, setEmail] = useState('');
     const [slackWebhookUrl, setSlackWebhookUrl] = useState('');
     const [smsPhone, setSmsPhone] = useState('');
+    const [discordWebhookUrl, setDiscordWebhookUrl] = useState('');
     const [rule7, setRule7] = useState(true);
     const [rule3, setRule3] = useState(true);
     const [rule1, setRule1] = useState(true);
@@ -96,6 +97,7 @@ export default function NewMomentPage() {
                     email,
                     slackWebhookUrl,
                     smsPhone,
+                    discordWebhookUrl,
                     rules: { seven: rule7, three: rule3, one: rule1, dayOf: rule0 },
                     visibility,
                     passcode: visibility === 'PRIVATE' ? passcode : undefined,
@@ -371,6 +373,20 @@ export default function NewMomentPage() {
                     </label>
                     <small style={{ opacity: .75 }}>Use E.164 format. Requires server Twilio credentials.</small>
                 </fieldset>
+
+                 <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+   <legend>Reminder (Discord)</legend>
+   <label style={{ display: 'block', marginBottom: 8 }}>
+     Channel Webhook URL
+     <input
+       value={discordWebhookUrl}
+       onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+       placeholder="https://discord.com/api/webhooks/{id}/{token}"
+       style={{ width: '100%', padding: 8, marginTop: 4 }}
+     />
+   </label>
+   <small style={{ opacity: .75 }}>Paste a Discord Incoming Webhook URL of the target channel.</small>
+ </fieldset>
 
                 <button
                     disabled={!canSubmit || submitting}

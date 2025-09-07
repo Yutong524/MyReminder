@@ -32,6 +32,7 @@ export async function PATCH(req, { params }) {
         const email = (body.email || '').trim();
         const slackWebhookUrl = (body.slackWebhookUrl || '').trim() || null;
         const smsPhone = (body.smsPhone || '').trim() || null;
+        const discordWebhookUrl = (body.discordWebhookUrl || "").trim() || null;
         const passcode = (body.passcode || '').trim();
         const rules = body.rules || {};
 
@@ -67,6 +68,7 @@ export async function PATCH(req, { params }) {
                 ownerEmail: email || null,
                 slackWebhookUrl,
                 smsPhone,
+                discordWebhookUrl,
                 passcodeHash,
                 notifyOnCheer,
                 notifyOnNote,

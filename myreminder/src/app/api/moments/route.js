@@ -40,6 +40,7 @@ export async function POST(req) {
         const email = (body.email || '').trim();
         const slackWebhookUrl = (body.slackWebhookUrl || '').trim() || null;
         const smsPhone = (body.smsPhone || '').trim() || null;
+        const discordWebhookUrl = (body.discordWebhookUrl || "").trim() || null;
         const rules = body.rules || {};
         const passcode = (body.passcode || '').trim();
 
@@ -91,7 +92,7 @@ export async function POST(req) {
                 rtime,
                 bgmUrl, bgmLoop, bgmVolume,
                 endSoundKey, endSoundUrl, endSoundVolume,
-                slackWebhookUrl, smsPhone, ownerEmail: email || null
+                slackWebhookUrl, smsPhone, discordWebhookUrl, ownerEmail: email || null
             },
             select: { id: true, slug: true, title: true, targetUtc: true, timeZone: true, ownerEmail: true },
         });
@@ -147,6 +148,17 @@ export async function POST(req) {
             });
             ruleCreates.push(rule);
             await prisma.reminderJob.createMany({ data: makeJobs({ channel: 'SMS', target: smsPhone, subject, bodyText }) });
+        }
+
+        if (discordWebhookUrl) {
+            const rule = await prisma.reminderRule.create({
+                data: { momentId: created.id, channel: 'DISCORD', offsetMinutes: 0, active: true }
+            });
+            ruleCreates.push(rule);
+            await prisma.reminderJob.createMany({
+                data: makeJobs({ channel: 'DISCORD', target: discordWebhookUrl, subject, bodyText })
+                    .map(j => ({ ...j, recipientDiscordWebhook: j.recipientDiscordWebhook || j.recipientSlackWebhook || discordWebhookUrl }))
+            });
         }
 
         if (created.rrule && created.rtime && created.targetUtc <= new Date()) {

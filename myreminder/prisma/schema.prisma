@@ -15,45 +15,46 @@ datasource db {
 }
 
 model Moment {
-  id            String           @id @default(cuid())
-  title         String
-  slug          String           @unique
-  targetUtc     DateTime
-  timeZone      String
-  visibility    Visibility       @default(PUBLIC)
-  theme         String           @default("default")
-  ownerEmail    String?
-  userId        String?
-  user          User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  passcodeHash  String?
-  slackWebhookUrl String?
-  smsPhone        String?      // E.164 e.g. +14155551234
-  bgmUrl        String?
-  bgmLoop       Boolean          @default(true)
-  bgmVolume     Int              @default(50)   // 0-100
-  endSoundKey   String?
-  endSoundUrl   String?
-  endSoundVolume Int             @default(80)   // 0-100
-  views         Int              @default(0)
-  uniques       Int              @default(0)
-  viewDays      ViewDay[]
-  refStats      ReferrerStat[]
-  uniqueSeens   UniqueSeen[]
-  cheerCount    Int              @default(0)
-  notifyOnCheer Boolean          @default(false)
-  notifyOnNote  Boolean          @default(false)
-  cheers        Cheer[]
-  guestbook     GuestbookEntry[]
-  rrule         String?
-  rtime         String?
-  currentStreak Int              @default(0)
-  maxStreak     Int              @default(0)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  rules         ReminderRule[]
-  jobs          ReminderJob[]
-  logs          DeliveryLog[]
-  skips         RecurrenceSkip[]
+  id                String           @id @default(cuid())
+  title             String
+  slug              String           @unique
+  targetUtc         DateTime
+  timeZone          String
+  visibility        Visibility       @default(PUBLIC)
+  theme             String           @default("default")
+  ownerEmail        String?
+  userId            String?
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  passcodeHash      String?
+  slackWebhookUrl   String?
+  smsPhone          String? // E.164 e.g. +14155551234
+  discordWebhookUrl String? // https://discord.com/api/webhooks/{id}/{token}
+  bgmUrl            String?
+  bgmLoop           Boolean          @default(true)
+  bgmVolume         Int              @default(50) // 0-100
+  endSoundKey       String?
+  endSoundUrl       String?
+  endSoundVolume    Int              @default(80) // 0-100
+  views             Int              @default(0)
+  uniques           Int              @default(0)
+  viewDays          ViewDay[]
+  refStats          ReferrerStat[]
+  uniqueSeens       UniqueSeen[]
+  cheerCount        Int              @default(0)
+  notifyOnCheer     Boolean          @default(false)
+  notifyOnNote      Boolean          @default(false)
+  cheers            Cheer[]
+  guestbook         GuestbookEntry[]
+  rrule             String?
+  rtime             String?
+  currentStreak     Int              @default(0)
+  maxStreak         Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  rules             ReminderRule[]
+  jobs              ReminderJob[]
+  logs              DeliveryLog[]
+  skips             RecurrenceSkip[]
 
   @@index([visibility])
   @@index([userId, createdAt])
@@ -126,6 +127,7 @@ enum Channel {
   EMAIL
   SLACK
   SMS
+  DISCORD
 }
 
 model ReminderRule {
@@ -151,27 +153,28 @@ enum JobStatus {
 }
 
 model ReminderJob {
-  id                String        @id @default(cuid())
-  momentId          String
-  ruleId            String
-  moment            Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  rule              ReminderRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  scheduledAt       DateTime
-  channel           Channel       @default(EMAIL)
-  status            JobStatus     @default(PENDING)
-  attempts          Int           @default(0)
-  lastError         String?
-  recipientEmail    String?
-  recipientSlackWebhook String?
-  recipientPhone    String?
-  subject           String
-  body              String
-  providerMessageId String?
-  sentAt            DateTime?
-  deliveredAt       DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  logs              DeliveryLog[]
+  id                      String        @id @default(cuid())
+  momentId                String
+  ruleId                  String
+  moment                  Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  rule                    ReminderRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  scheduledAt             DateTime
+  channel                 Channel       @default(EMAIL)
+  status                  JobStatus     @default(PENDING)
+  attempts                Int           @default(0)
+  lastError               String?
+  recipientEmail          String?
+  recipientSlackWebhook   String?
+  recipientDiscordWebhook String?
+  recipientPhone          String?
+  subject                 String
+  body                    String
+  providerMessageId       String?
+  sentAt                  DateTime?
+  deliveredAt             DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  logs                    DeliveryLog[]
 
   @@index([status, scheduledAt])
   @@index([channel, status, scheduledAt])

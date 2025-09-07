@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendSlack } from '@/lib/channels/slack';
 import { sendSMS } from '@/lib/channels/sms';
+import { sendDiscord } from '@/lib/channels/discord';
 
 const BATCH = Number(process.env.CRON_BATCH || 25);
 
@@ -38,6 +39,10 @@ export async function POST(req) {
                 providerId = info?.id || null;
             } else if (j.channel === 'SMS') {
                 const info = await sendSMS({ to: j.recipientPhone, body: j.body });
+                providerId = info?.id || null;
+            }
+            else if (j.channel === 'DISCORD') {
+                const info = await sendDiscord({ webhook: j.recipientDiscordWebhook, content: j.body });
                 providerId = info?.id || null;
             }
 

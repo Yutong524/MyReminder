@@ -116,12 +116,45 @@ export default async function CountdownPage({ params }) {
             background: 'conic-gradient(from 220deg at 110% 10%, rgba(255, 193, 7, 0.22), transparent 30%), conic-gradient(from 140deg at -10% 0%, rgba(13, 99, 229, 0.25), transparent 35%)',
             filter: 'blur(40px)', pointerEvents: 'none'
         },
-        shell: { maxWidth: 1120, margin: '40px auto', position: 'relative' },
-        layout: {
+
+        shell: { maxWidth: 1200, margin: '0 auto', position: 'relative' },
+
+        hero: {
+            minHeight: 'min(30vh, 30svh)',
             display: 'grid',
-            gridTemplateColumns: 'minmax(0,1fr) 340px',
-            gap: 16
+            gridTemplateRows: 'auto 1fr auto',
+            justifyItems: 'center',
+            alignItems: 'stretch',
+            padding: 24,
+            position: 'relative'
         },
+
+        rowTop: { gridRow: 1, display: 'grid', gap: 10, justifyItems: 'center' },
+        rowCenter: { gridRow: 2, display: 'grid', placeItems: 'center' },
+        rowBottom: { gridRow: 3, display: 'grid', placeItems: 'center' },
+        topChips: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
+
+        chip: {
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px',
+            borderRadius: 999, border: '1px solid rgba(255,255,255,0.10)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            color: '#C7D3E8', fontSize: 14
+        },
+        title: {
+            margin: 0,
+            textAlign: 'center',
+            fontSize: 'clamp(14px, 2vw, 56px)',
+            lineHeight: 1.05,
+            letterSpacing: '-0.02em',
+            color: m.titleColor || '#EAF2FF',
+            textShadow: '0 6px 24px rgba(0,0,0,0.45)'
+        },
+        timerWrap: {
+            display: 'grid', placeItems: 'center', marginTop: 8, marginBottom: 8
+        },
+        infoChips: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 },
+
+        below: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: 16, margin: '24px 0 36px' },
         mainCard: {
             borderRadius: 20,
             background: 'linear-gradient(180deg, rgba(13,16,31,0.78), rgba(12,14,24,0.72))',
@@ -140,39 +173,50 @@ export default async function CountdownPage({ params }) {
             position: 'sticky',
             top: 16
         },
-        title: {
-            margin: 0,
-            fontSize: 'clamp(28px, 5vw, 44px)',
-            lineHeight: 1.1,
-            letterSpacing: '-0.02em',
-            color: m.titleColor || '#EAF2FF'
-        },
-        subtitle: { margin: '6px 0 12px', color: '#B9C6DD' },
-        metaRow: { display: 'flex', gap: 8, alignItems: 'center', color: '#8FA5C6', fontSize: 14, marginBottom: 10 },
-        bullet: { width: 4, height: 4, borderRadius: 99, background: '#7FB3FF', opacity: .7 },
-        divider: { height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.14), rgba(255,255,255,0))', margin: '16px 0' },
-        guestCard: {
-            borderRadius: 16,
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
-            border: '1px solid rgba(255,255,255,0.10)',
-            padding: 16,
-            marginTop: 16
-        },
-
         sec: { borderRadius: 12, border: '1px solid rgba(255,255,255,0.10)', marginBottom: 10, overflow: 'hidden' },
         secHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', cursor: 'pointer', userSelect: 'none' },
         secTitle: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#EAF2FF', fontWeight: 600 },
         secBody: { padding: 12, borderTop: '1px solid rgba(255,255,255,0.08)', color: '#C7D3E8', fontSize: 13 },
-        tag: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' }
+        tag: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)' },
+
+        guestCard: {
+            borderRadius: 16,
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+            border: '1px solid rgba(255,255,255,0.10)',
+            padding: 16
+        }
     };
 
     const css = [
-        '@media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } .side{ position: static !important; } }',
+        '.hero-timer > *{ transform: scale(1.8); transform-origin: center; }',
+        '@media (max-width: 980px){ .hero-timer > *{ transform: scale(1.25); } }',
+        '@media (max-width: 980px){ .below{ grid-template-columns: 1fr; } .side{ position: static !important; } }',
         '.chev{ transition: transform 160ms ease; }',
         'details[open] .chev{ transform: rotate(90deg); }',
-        '.pill{ transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }',
-        '.pill:hover{ transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.18); }'
+        '.chip{ transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }',
+        '.chip:hover{ transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.18); }'
     ].join('\n');
+
+    const eventChip = (
+        <span style={styles.chip} className="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3" stroke="#7FB3FF" strokeWidth="1.8" />
+                <path d="M3 9h18" stroke="#7FB3FF" strokeWidth="1.8" />
+                <path d="M8 3v4M16 3v4" stroke="#7FB3FF" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            Event: {formatInIana(m.targetUtc.toISOString(), m.timeZone)} ({m.timeZone})
+        </span>
+    );
+
+    const localChip = (
+        <span style={styles.chip} className="chip">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#FFC107" strokeWidth="1.8" />
+                <circle cx="12" cy="10" r="2.5" stroke="#FFC107" strokeWidth="1.8" />
+            </svg>
+            Your local: {formatInLocal(m.targetUtc.toISOString())}
+        </span>
+    );
 
     return (
         <div className={`theme-${m.theme} page-wrap`} style={styles.page}>
@@ -183,48 +227,62 @@ export default async function CountdownPage({ params }) {
             <AnalyticsTracker slug={slug} />
 
             <div style={styles.shell}>
-                <div className="layout" style={styles.layout}>
-                    {/* Main card — minimalist template-focused countdown */}
-                    <main className="card" style={styles.mainCard}>
-                        <div style={styles.metaRow}>
-                            <span style={styles.tag} className="pill">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <section style={styles.hero}>
+                    <div style={styles.topChips}>
+                        <span style={styles.chip} className="chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14" stroke="#7FB3FF" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                            Countdown
+                        </span>
+                        <span style={styles.chip} className="chip">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9" stroke="#C7D3E8" strokeWidth="1.8" />
+                                <path d="M12 7v6l4 2" stroke="#C7D3E8" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                            Time left · {humanizeRemaining(m.targetUtc.toISOString())}
+                        </span>
+                    </div>
+
+                    <h1 style={styles.title}>{m.title}</h1>
+
+                    <div className="hero-timer" style={{ ...styles.timerWrap }}>
+                        <Countdown
+                            targetIso={m.targetUtc.toISOString()}
+                            audio={{
+                                bgmUrl: m.bgmUrl || null,
+                                bgmLoop: m.bgmLoop,
+                                bgmVolume: m.bgmVolume,
+                                endUrl: m.endSoundUrl || (m.endSoundKey && m.endSoundKey !== 'none' ? `/sounds/${m.endSoundKey}.mp3` : null),
+                                endVolume: m.endSoundVolume
+                            }}
+                        />
+                    </div>
+
+                    <div style={styles.infoChips}>
+                        {eventChip}
+                        {localChip}
+                    </div>
+                </section>
+
+                <section className="below" style={styles.below}>
+                    <div style={styles.mainCard}>
+                        <details open>
+                            <summary style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', color: '#EAF2FF', fontWeight: 600 }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M12 5v14M5 12h14" stroke="#7FB3FF" strokeWidth="2" strokeLinecap="round" />
                                 </svg>
-                                Countdown
-                            </span>
-                            <span style={styles.bullet} />
-                            <span style={{ color: '#8FA5C6' }}>Time left · {humanizeRemaining(m.targetUtc.toISOString())}</span>
-                        </div>
+                                Guestbook & Cheers
+                                <span style={{ color: '#8FA5C6', fontWeight: 400 }}>— keep it friendly</span>
+                            </summary>
+                            <div style={{ paddingTop: 12 }}>
+                                <div style={styles.guestCard}>
+                                    <CheerGuestbook slug={slug} initialCount={m.cheerCount} />
+                                </div>
+                            </div>
+                        </details>
+                    </div>
 
-                        <h1 className="title" style={styles.title}>{m.title}</h1>
-
-                        <div style={styles.subtitle}>
-                            <span>Event time: {formatInIana(m.targetUtc.toISOString(), m.timeZone)} ({m.timeZone})</span>
-                            <span style={{ marginLeft: 8, opacity: .9 }}>• Your local: {formatInLocal(m.targetUtc.toISOString())}</span>
-                        </div>
-
-                        <div style={styles.divider} />
-
-                        <div style={{ display: 'grid', gap: 8 }}>
-                            <Countdown
-                                targetIso={m.targetUtc.toISOString()}
-                                audio={{
-                                    bgmUrl: m.bgmUrl || null,
-                                    bgmLoop: m.bgmLoop,
-                                    bgmVolume: m.bgmVolume,
-                                    endUrl: m.endSoundUrl || (m.endSoundKey && m.endSoundKey !== 'none' ? `/sounds/${m.endSoundKey}.mp3` : null),
-                                    endVolume: m.endSoundVolume
-                                }}
-                            />
-                        </div>
-
-                        <div style={styles.guestCard}>
-                            <CheerGuestbook slug={slug} initialCount={m.cheerCount} />
-                        </div>
-                    </main>
-
-                    {/* Sidebar — advanced / supporting info */}
                     <aside className="side" style={styles.sideCard}>
                         <details open>
                             <summary style={styles.secHeader}>
@@ -269,27 +327,6 @@ export default async function CountdownPage({ params }) {
                             </div>
                         </details>
 
-                        <details>
-                            <summary style={styles.secHeader}>
-                                <span style={styles.secTitle}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M6 18V6l12 6-12 6z" stroke="#7FB3FF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    Audio
-                                </span>
-                                <svg className="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M9 18l6-6-6-6" stroke="#C7D3E8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </summary>
-                            <div style={styles.secBody}>
-                                <div style={{ display: 'grid', gap: 6 }}>
-                                    <div><span style={styles.tag}>BGM</span> {m.bgmUrl ? 'Enabled' : 'None'}</div>
-                                    {m.bgmUrl && <div style={{ opacity: .9 }}>Loop: {m.bgmLoop ? 'Yes' : 'No'} · Vol: {m.bgmVolume ?? 100}</div>}
-                                    <div><span style={styles.tag}>End sound</span> {m.endSoundUrl || (m.endSoundKey && m.endSoundKey !== 'none') ? 'Enabled' : 'None'}</div>
-                                </div>
-                            </div>
-                        </details>
-
                         {logs.length > 0 && (
                             <details>
                                 <summary style={styles.secHeader}>
@@ -317,7 +354,7 @@ export default async function CountdownPage({ params }) {
                             </details>
                         )}
                     </aside>
-                </div>
+                </section>
             </div>
 
             <style dangerouslySetInnerHTML={{ __html: css }} />

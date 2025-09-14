@@ -1,13 +1,14 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Countdown from '../view-client';
 
 export default function EditForm({ slug, initial }) {
     const router = useRouter();
     const [title, setTitle] = useState(initial.title);
     const [timeZone, setTimeZone] = useState(initial.timeZone);
     const [theme, setTheme] = useState(initial.theme);
-
+    const [showPreview, setShowPreview] = useState(false);
     const [bgImageUrl, setBgImageUrl] = useState(initial.bgImageUrl || '');
     const [bgSize, setBgSize] = useState(initial.bgSize || 'cover');
     const [bgPosition, setBgPosition] = useState(initial.bgPosition || 'center');
@@ -51,9 +52,99 @@ export default function EditForm({ slug, initial }) {
     const [openNotify, setOpenNotify] = useState(false);
     const [openBackground, setOpenBackground] = useState(false);
     const [openRepeat, setOpenRepeat] = useState(false);
+    const [openEndActions, setOpenEndActions] = useState(true);
+
+    const [endConfetti, setEndConfetti] = useState(true);
+    const [endFlash, setEndFlash] = useState(false);
+    const [endShake, setEndShake] = useState(false);
+    const [showEndDemo, setShowEndDemo] = useState(false);
 
     const localDateTime = useMemo(() => (date && time ? `${date}T${time}` : ''), [date, time]);
     const canSubmit = !!(title.trim() && localDateTime && timeZone && (visibility !== 'PRIVATE' || passcode.trim().length >= 4));
+
+    function toPreviewISO(dtStr, tz) {
+        if (!dtStr) return new Date().toISOString();
+        const [d, t] = dtStr.split('T');
+        const [Y, M, D] = d.split('-').map(n => +n);
+        const [h, m] = t.split(':').map(n => +n);
+        const fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        });
+
+        let guess = Date.UTC(Y, M - 1, D, h, m, 0);
+
+        for (let i = 0; i < 2; i++) {
+            const parts = Object.fromEntries(fmt.formatToParts(new Date(guess)).map(p => [p.type, p.value]));
+            const y = +parts.year, mo = +parts.month, da = +parts.day, hh = +parts.hour, mi = +parts.minute, ss = +parts.second;
+            const asUTC = Date.UTC(y, mo - 1, da, hh, mi, ss);
+
+            const delta = Date.UTC(Y, M - 1, D, h, m, 0) - asUTC;
+            guess += delta;
+            if (!delta) break;
+        }
+        return new Date(guess).toISOString();
+    }
+    const previewISO = useMemo(() => toPreviewISO(localDateTime, timeZone), [localDateTime, timeZone]);
+
+    const eventText = useMemo(() => {
+        if (!localDateTime) return '';
+        try {
+            const opts = { timeZone, year: 'numeric', month: 'long', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+            return new Date(previewISO).toLocaleString(undefined, opts) + ` (${timeZone})`;
+        } catch { return `${localDateTime} (${timeZone})`; }
+    }, [previewISO, localDateTime, timeZone]);
+    const localText = useMemo(() => {
+        if (!localDateTime) return '';
+        const d = new Date(previewISO);
+        return d.toLocaleString();
+    }, [previewISO]);
+
+    function cssFilterFrom(f) {
+        if (!f) return '';
+        const { blur = 0, brightness = 100, contrast = 100, grayscale = 0, sepia = 0 } = f || {};
+        const parts = [];
+        if (blur) parts.push(`blur(${blur}px)`);
+        if (brightness !== 100) parts.push(`brightness(${brightness}%)`);
+        if (contrast !== 100) parts.push(`contrast(${contrast}%)`);
+        if (grayscale) parts.push(`grayscale(${grayscale}%)`);
+        if (sepia) parts.push(`sepia(${sepia}%)`);
+        return parts.join(' ');
+    }
+    const previewBg = bgImageUrl ? {
+        backgroundImage: `url(${bgImageUrl})`,
+        backgroundSize: bgSize || 'cover',
+        backgroundPosition: bgPosition || 'center',
+        backgroundRepeat: 'no-repeat',
+        mixBlendMode: bgBlend || 'normal',
+        filter: cssFilterFrom(filters),
+        opacity: (bgOpacity ?? 100) / 100,
+    } : null;
+
+    const confettiPieces = useMemo(() => {
+        if (!showEndDemo || !endConfetti) return [];
+        const colors = ['#FFC107', '#7FB3FF', '#34D399', '#F472B6', '#F59E0B', '#60A5FA'];
+        return Array.from({ length: 80 }).map(() => {
+            const left = Math.random() * 100;
+            const dx = (Math.random() * 40 - 20);
+            const dur = 1.8 + Math.random() * 1.6;
+            const delay = Math.random() * 0.8;
+            const bg = colors[Math.floor(Math.random() * colors.length)];
+            const w = 6 + Math.random() * 6;
+            const h = 10 + Math.random() * 10;
+            const rot = Math.random() * 360;
+            return { left: `${left}%`, dx: `${dx}vw`, dur: `${dur}s`, delay: `${delay}s`, bg, w, h, rot };
+        });
+    }, [showEndDemo, endConfetti]);
+
+    function playEndscene() {
+        if (!endConfetti && !endFlash && !endShake) return;
+        setShowEndDemo(false);
+        requestAnimationFrame(() => {
+            setShowEndDemo(true);
+            setTimeout(() => setShowEndDemo(false), 3200);
+        });
+    }
 
     async function uploadFile(file) {
         const fd = new FormData();
@@ -84,6 +175,21 @@ export default function EditForm({ slug, initial }) {
                     regenerateJobs: true,
                     notifyOnCheer: notifyCheer,
                     notifyOnNote: notifyNote,
+                    bgImageUrl: bgImageUrl || undefined,
+                    bgSize,
+                    bgPosition,
+                    bgOpacity,
+                    bgBlend,
+                    titleColor,
+                    timeColor,
+                    bgFilters: filters,
+
+                    endActions: {
+                        confetti: endConfetti,
+                        flashRed: endFlash,
+                        shake: endShake
+                    },
+
                     recurrence: recType === 'NONE' ? undefined : {
                         type: recType,
                         days: recType === 'WEEKLY' ? Object.entries(wk).filter(([, v]) => v).map(([k]) => k) : undefined
@@ -164,7 +270,49 @@ export default function EditForm({ slug, initial }) {
             background: 'linear-gradient(180deg, #0D63E5 0%, #0A4BBB 100%)', color: '#FFFFFF',
             fontWeight: 600, letterSpacing: '0.01em', boxShadow: '0 12px 24px rgba(13,99,229,0.30), inset 0 1px 0 rgba(255,255,255,0.20)'
         },
-        error: { color: 'crimson', marginTop: 8 }
+        error: { color: 'crimson', marginTop: 8 },
+        previewOverlay: {
+            position: 'fixed', inset: 0, zIndex: 60,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'grid', placeItems: 'center'
+        },
+        previewStage: {
+            position: 'relative',
+            width: 'min(1100px, 96vw)',
+            height: 'min(700px, 92vh)',
+            borderRadius: 20,
+            overflow: 'hidden',
+            background: 'linear-gradient(180deg, #0A0F1F 0%, #0A0B12 100%)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            boxShadow: '0 30px 80px rgba(0,0,0,0.55)'
+        },
+        previewGrid: {
+            position: 'absolute', inset: 0,
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '40px 40px, 40px 40px',
+            maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0) 75%)',
+            pointerEvents: 'none'
+        },
+        previewHero: {
+            position: 'absolute', inset: 0,
+            display: 'grid', gridTemplateRows: 'auto 1fr auto', justifyItems: 'center', alignItems: 'stretch', padding: 20, color: '#EAF2FF'
+        },
+        previewTop: { gridRow: 1, display: 'grid', gap: 8, justifyItems: 'center' },
+        previewTitle: { margin: 0, fontSize: 'clamp(14px, 2.2vw, 28px)', letterSpacing: '-0.02em' },
+        previewCenter: { gridRow: 2, display: 'grid', placeItems: 'center' },
+        previewBottom: { gridRow: 3, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
+        chip: {
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 32, padding: '0 12px',
+            borderRadius: 999, border: '1px solid rgba(255,255,255,0.10)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            color: '#C7D3E8', fontSize: 12
+        },
+        closeBtn: {
+            position: 'absolute', right: 12, top: 12, zIndex: 2,
+            padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+            color: '#EAF2FF', cursor: 'pointer'
+        }
     };
 
     const css = [
@@ -174,7 +322,17 @@ export default function EditForm({ slug, initial }) {
         '.cta:hover{ transform: translateY(-1px); box-shadow: 0 16px 30px rgba(13,99,229,0.38), inset 0 1px 0 rgba(255,255,255,0.25); }',
         '.chev{ transition: transform 160ms ease, opacity 160ms ease; }',
         '.rot{ transform: rotate(90deg); }',
-        '@media (max-width: 720px){ .two{ grid-template-columns: 1fr; } }'
+        '@media (max-width: 720px){ .two{ grid-template-columns: 1fr; } }',
+        '.preview-timer{ display:grid; place-items:center; }',
+        '.preview-timer > *{ transform: scale(1.65); transform-origin:center; }',
+        '@media (max-width: 980px){ .preview-timer > *{ transform: scale(1.25); } }',
+        '.confetti{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }',
+        '.confetti i{ position:absolute; top:-10%; border-radius:2px; opacity:.95; will-change:transform; animation:confFall var(--dur) linear var(--delay) forwards; }',
+        '@keyframes confFall{ to{ transform: translate3d(var(--dx), 120vh, 0) rotate(540deg); } }',
+        '.flash-red{ position:absolute; inset:0; background:rgba(255,0,0,0.35); animation:flashRed 900ms ease-in-out 3; pointer-events:none; }',
+        '@keyframes flashRed{ 0%,100%{ opacity:0 } 50%{ opacity:.35 } }',
+        '.shake{ animation:shake 600ms ease-in-out 3; }',
+        '@keyframes shake{ 0%{ transform:translateX(0) } 20%{ transform:translateX(-10px) } 40%{ transform:translateX(10px) } 60%{ transform:translateX(-8px) } 80%{ transform:translateX(8px) } 100%{ transform:translateX(0) } }'
     ].join('\n');
 
     function Section({ open, setOpen, title, hint, children, iconColor = '#7FB3FF' }) {
@@ -211,6 +369,8 @@ export default function EditForm({ slug, initial }) {
                     <span style={styles.stepPill}><span style={styles.dotBlue} />Access</span>
                     <span style={styles.stepPill}><span style={styles.dotGold} />Email & Owner</span>
                     <span style={styles.stepPill}><span style={styles.dotGold} />Background</span>
+                    <span style={styles.stepPill}><span style={styles.dotGold} />Recurrence</span>
+                    <span style={styles.stepPill}><span style={styles.dotGold} />End Scene</span>
                     <span style={styles.stepPill}><span style={styles.dotGold} />Recurrence</span>
                 </div>
 
@@ -400,6 +560,30 @@ export default function EditForm({ slug, initial }) {
                     </Section>
 
                     <Section
+                        open={openEndActions}
+                        setOpen={setOpenEndActions}
+                        title="End Scene"
+                        hint="Choose what happens when the countdown ends"
+                        iconColor="#7FB3FF"
+                    >
+                        <div style={{ display: 'grid', gap: 10 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <input type="checkbox" checked={endConfetti} onChange={e => setEndConfetti(e.target.checked)} />
+                                Falling confetti (celebration)
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <input type="checkbox" checked={endFlash} onChange={e => setEndFlash(e.target.checked)} />
+                                Flash red (alarm)
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <input type="checkbox" checked={endShake} onChange={e => setEndShake(e.target.checked)} />
+                                Shake window
+                            </label>
+                            <small style={{ color: '#8FA5C6' }}>These actions will trigger right when the countdown hits zero. You can preview them below.</small>
+                        </div>
+                    </Section>
+
+                    <Section
                         open={openRepeat}
                         setOpen={setOpenRepeat}
                         title="Recurrence"
@@ -439,10 +623,15 @@ export default function EditForm({ slug, initial }) {
                     </Section>
 
                     <div style={styles.ctaRow}>
-                        <span style={styles.hint}>Review changes, then save.</span>
-                        <button className="cta" style={styles.btn} disabled={submitting || !canSubmit} aria-busy={submitting ? 'true' : 'false'}>
-                            {submitting ? 'Saving…' : 'Save changes'}
-                        </button>
+                        <span style={styles.hint}>Review changes, then preview & save.</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button type="button" className="cta" style={{ ...styles.btn, background: 'linear-gradient(180deg, #FFC107 0%, #D19A00 100%)', boxShadow: '0 12px 24px rgba(255,193,7,0.28), inset 0 1px 0 rgba(255,255,255,0.20)' }} onClick={() => setShowPreview(true)}>
+                                Preview
+                            </button>
+                            <button className="cta" style={styles.btn} disabled={submitting || !canSubmit} aria-busy={submitting ? 'true' : 'false'}>
+                                {submitting ? 'Saving…' : 'Save changes'}
+                            </button>
+                        </div>
                     </div>
 
                     {err && <p style={styles.error}>{err}</p>}
@@ -450,6 +639,89 @@ export default function EditForm({ slug, initial }) {
             </section>
 
             <style dangerouslySetInnerHTML={{ __html: css }} />
+
+            {showPreview && (
+                <div style={styles.previewOverlay} onKeyDown={(e) => { if (e.key === 'Escape') setShowPreview(false); }}>
+                    <div style={styles.previewStage} className={showEndDemo && endShake ? 'shake' : ''}>
+                        {previewBg && <div aria-hidden style={{ position: 'absolute', inset: 0, ...previewBg }} />}
+                        <div style={styles.previewGrid} aria-hidden />
+                        <button type="button" style={styles.closeBtn} onClick={() => setShowPreview(false)}>Close</button>
+
+                        <button
+                            type="button"
+                            onClick={playEndscene}
+                            style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 2, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)', background: 'linear-gradient(180deg, #FFC107 0%, #D19A00 100%)', color: '#0B0E19', fontWeight: 700 }}
+                            disabled={!endConfetti && !endFlash && !endShake}
+                            aria-disabled={!endConfetti && !endFlash && !endShake}
+                            title="Play endscene"
+                        >
+                            Play endscene
+                        </button>
+
+                        <div style={styles.previewHero}>
+                            <div style={styles.previewTop}>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    <span style={styles.chip}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M12 5v14M5 12h14" stroke="#7FB3FF" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
+                                        Countdown preview
+                                    </span>
+                                </div>
+                                <h2 style={styles.previewTitle}>{title || 'Untitled'}</h2>
+                            </div>
+                            <div className="preview-timer" style={styles.previewCenter}>
+                                <Countdown
+                                    targetIso={previewISO}
+                                    audio={{
+                                        bgmUrl: null, bgmLoop: false, bgmVolume: 0,
+                                        endUrl: null, endVolume: 0
+                                    }}
+                                />
+                            </div>
+                            <div style={styles.previewBottom}>
+                                <span style={styles.chip}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <rect x="3" y="5" width="18" height="16" rx="3" stroke="#7FB3FF" strokeWidth="1.8" />
+                                        <path d="M3 9h18" stroke="#7FB3FF" strokeWidth="1.8" />
+                                        <path d="M8 3v4M16 3v4" stroke="#7FB3FF" strokeWidth="1.8" strokeLinecap="round" />
+                                    </svg>
+                                    {eventText}
+                                </span>
+                                <span style={styles.chip}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" stroke="#FFC107" strokeWidth="1.8" />
+                                        <circle cx="12" cy="10" r="2.5" stroke="#FFC107" strokeWidth="1.8" />
+                                    </svg>
+                                    Your local: {localText}
+                                </span>
+                            </div>
+                        </div>
+
+                        {showEndDemo && endFlash && <div className="flash-red" aria-hidden />}
+                        {showEndDemo && endConfetti && (
+                            <div className="confetti" aria-hidden>
+                                {confettiPieces.map((p, i) => (
+                                    <i
+                                        key={i}
+                                        style={{
+                                            left: p.left,
+                                            background: p.bg,
+                                            width: p.w,
+                                            height: p.h,
+                                            transform: `rotate(${p.rot}deg)`,
+                                            '--dx': p.dx,
+                                            '--dur': p.dur,
+                                            '--delay': p.delay
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

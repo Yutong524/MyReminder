@@ -43,6 +43,16 @@ export async function PATCH(req, { params }) {
         const endSoundUrl = (body.endSoundUrl || '').trim() || null;
         const endSoundVolume = Math.max(0, Math.min(100, Number(body.endSoundVolume ?? 80)));
 
+        const bgImageUrl = (body.bgImageUrl || '').trim() || null;
+        const bgSize = (body.bgSize || '').trim() || null;
+        const bgPosition = (body.bgPosition || '').trim() || null;
+        const _bgOpacity = body.bgOpacity;
+        const bgOpacity = Number.isFinite(+_bgOpacity) ? Math.max(0, Math.min(100, +_bgOpacity)) : undefined; // 0-100
+        const bgBlend = (body.bgBlend || '').trim() || null;
+        const bgFilters = body.bgFilters && typeof body.bgFilters === 'object' ? body.bgFilters : null;
+        const titleColor = (body.titleColor || '').trim() || null;   // '#ffffff'
+        const timeColor = (body.timeColor || '').trim() || null;   // '#00ffcc'
+
         const notifyOnCheer = body.notifyOnCheer === true;
         const notifyOnNote = body.notifyOnNote === true;
         const recurrence = body.recurrence || null;
@@ -76,6 +86,14 @@ export async function PATCH(req, { params }) {
                 endSoundKey,
                 endSoundUrl: endSoundKey && endSoundKey !== 'none' ? null : endSoundUrl,
                 endSoundVolume,
+                bgImageUrl,
+                bgSize,
+                bgPosition,
+                ...(bgOpacity !== undefined ? { bgOpacity } : {}),
+                bgBlend,
+                bgFilters,
+                titleColor,
+                timeColor,
             }
         };
 

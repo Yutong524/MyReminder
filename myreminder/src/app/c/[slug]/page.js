@@ -17,7 +17,14 @@ export default async function CountdownPage({ params }) {
     const m = await prisma.moment.findUnique({
         where: { slug },
         select: {
-            id: true, title: true, slug: true, targetUtc: true, timeZone: true, theme: true, visibility: true
+            id: true, title: true, slug: true, targetUtc: true, timeZone: true, theme: true, visibility: true,
+            bgImageUrl: true, bgSize: true, bgPosition: true, bgOpacity: true, bgBlend: true, bgFilters: true,
+            titleColor: true, timeColor: true,
+
+            bgmUrl: true, bgmLoop: true, bgmVolume: true,
+            endSoundKey: true, endSoundUrl: true, endSoundVolume: true,
+
+            cheerCount: true,
         }
     });
     if (!m) return notFound();
@@ -45,12 +52,25 @@ export default async function CountdownPage({ params }) {
         take: 10,
     });
 
+    const bgLayer = m.bgImageUrl ? {
+        backgroundImage: `url(${m.bgImageUrl})`,
+        backgroundSize: m.bgSize || 'cover',
+        backgroundPosition: m.bgPosition || 'center',
+        backgroundRepeat: 'no-repeat',
+        mixBlendMode: m.bgBlend || 'normal',
+        filter: cssFilterFrom(m.bgFilters),
+        opacity: (m.bgOpacity ?? 100) / 100,
+    } : null;
+
     return (
-        <div className={`theme-${m.theme} page-wrap`}>
+        <div className={`theme-${m.theme} page-wrap`} style={{ position: 'relative', overflow: 'hidden' }}>
+            {bgLayer && (
+                <div aria-hidden style={{ position: 'absolute', inset: 0, ...bgLayer }} />
+            )}
             <AnalyticsTracker slug={slug} />
             <main className="card">
                 <ShareControls slug={slug} title={m.title} theme={m.theme} />
-                <h1 className="title">{m.title}</h1>
+                <h1 className="title" style={{ color: m.titleColor || undefined }}>{m.title}</h1>
                 <p className="subtitle">
                     Time left · {humanizeRemaining(m.targetUtc.toISOString())}
                 </p>
@@ -139,4 +159,21 @@ export async function generateMetadata({ params }) {
 
 function AccessGate({ slug }) {
     return <AccessGateClient slug={slug} />;
+}
+
+function cssFilterFrom(filters) {
+    if (!filters) return '';
+    const {
+        blur = 0, brightness = 100, contrast = 100,
+        grayscale = 0, sepia = 0
+    } = filters || {};
+
+    const parts = [];
+    if (blur) parts.push(`blur(${blur}px)`);
+    if (brightness !== 100) parts.push(`brightness(${brightness}%)`);
+    if (contrast !== 100) parts.push(`contrast(${contrast}%)`);
+    if (grayscale) parts.push(`grayscale(${grayscale}%)`);
+    if (sepia) parts.push(`sepia(${sepia}%)`);
+
+    return parts.join(' ');
 }

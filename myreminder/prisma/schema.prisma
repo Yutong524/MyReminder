@@ -22,6 +22,14 @@ model Moment {
   timeZone          String
   visibility        Visibility       @default(PUBLIC)
   theme             String           @default("default")
+  bgImageUrl        String?
+  bgSize            String?
+  bgPosition        String?
+  bgOpacity         Int              @default(100) // 0-100
+  bgBlend           String?
+  bgFilters         Json?
+  titleColor        String?
+  timeColor         String?
   ownerEmail        String?
   userId            String?
   user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)

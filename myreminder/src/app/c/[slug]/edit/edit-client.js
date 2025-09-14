@@ -7,6 +7,22 @@ export default function EditForm({ slug, initial }) {
     const [title, setTitle] = useState(initial.title);
     const [timeZone, setTimeZone] = useState(initial.timeZone);
     const [theme, setTheme] = useState(initial.theme);
+
+    const [bgImageUrl, setBgImageUrl] = useState(m.bgImageUrl || '');
+    const [bgSize, setBgSize] = useState(m.bgSize || 'cover');
+    const [bgPosition, setBgPosition] = useState(m.bgPosition || 'center');
+    const [bgOpacity, setBgOpacity] = useState(m.bgOpacity ?? 100);
+    const [bgBlend, setBgBlend] = useState(m.bgBlend || 'normal');
+    const [titleColor, setTitleColor] = useState(m.titleColor || '#ffffff');
+    const [timeColor, setTimeColor] = useState(m.timeColor || '#ffffff');
+    const [filters, setFilters] = useState({
+        blur: m.bgFilters?.blur || 0,
+        brightness: m.bgFilters?.brightness ?? 100,
+        contrast: m.bgFilters?.contrast ?? 100,
+        grayscale: m.bgFilters?.grayscale || 0,
+        sepia: m.bgFilters?.sepia || 0,
+    });
+
     const [visibility, setVisibility] = useState(initial.visibility);
     const [passcode, setPasscode] = useState('');
     const [email, setEmail] = useState(initial.email);
@@ -29,6 +45,15 @@ export default function EditForm({ slug, initial }) {
 
     const localDateTime = useMemo(() => (date && time ? `${date}T${time}` : ''), [date, time]);
     const canSubmit = !!(title.trim() && localDateTime && timeZone && (visibility !== 'PRIVATE' || passcode.trim().length >= 0));
+
+    async function uploadFile(file) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Upload failed');
+        return json.url;
+    }
 
     async function onSubmit(e) {
         e.preventDefault();
@@ -163,6 +188,75 @@ export default function EditForm({ slug, initial }) {
                 </label>
                 <small style={{ opacity: .7 }}>Requires a valid email set above.</small>
             </fieldset>
+
+            <fieldset style={{ border: '1px solid rgba(0,0,0,0.1)', padding: 12, borderRadius: 8 }}>
+                <legend>Background image</legend>
+                <div style={{ display: 'grid', gap: 10 }}>
+                    <div>
+                        <input type="file" accept="image/*"
+                            onChange={async (e) => {
+                                const f = e.target.files?.[0];
+                                if (f) {
+                                    const url = await uploadFile(f);
+                                    setBgImageUrl(url);
+                                }
+                            }} />
+                        {bgImageUrl && <div style={{ marginTop: 8 }}>
+                            <img src={bgImageUrl} alt="" style={{ maxWidth: '100%', borderRadius: 8 }} />
+                        </div>}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <label>Size
+                            <select value={bgSize} onChange={e => setBgSize(e.target.value)} style={{ width: '100%' }}>
+                                <option value="cover">cover</option>
+                                <option value="contain">contain</option>
+                                <option value="auto">auto</option>
+                            </select>
+                        </label>
+                        <label>Position
+                            <input value={bgPosition} onChange={e => setBgPosition(e.target.value)} placeholder="center / 50% 50%" style={{ width: '100%' }} />
+                        </label>
+                    </div>
+                    <label>Opacity: {bgOpacity}%
+                        <input type="range" min="0" max="100" value={bgOpacity} onChange={e => setBgOpacity(+e.target.value)} />
+                    </label>
+                    <label>Blend mode
+                        <select value={bgBlend} onChange={e => setBgBlend(e.target.value)} style={{ width: '100%' }}>
+                            <option>normal</option><option>multiply</option><option>screen</option>
+                            <option>overlay</option><option>darken</option><option>lighten</option>
+                        </select>
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <label>Title color <input type="color" value={titleColor} onChange={e => setTitleColor(e.target.value)} /></label>
+                        <label>Time color  <input type="color" value={timeColor} onChange={e => setTimeColor(e.target.value)} /></label>
+                    </div>
+                    <details>
+                        <summary>Filters</summary>
+                        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                            <label>Blur: {filters.blur}px
+                                <input type="range" min="0" max="20" value={filters.blur} onChange={e => setFilters({ ...filters, blur: +e.target.value })} />
+                            </label>
+                            <label>Brightness: {filters.brightness}%
+                                <input type="range" min="50" max="150" value={filters.brightness}
+                                    onChange={e => setFilters({ ...filters, brightness: +e.target.value })} />
+                            </label>
+                            <label>Contrast: {filters.contrast}%
+                                <input type="range" min="50" max="150" value={filters.contrast}
+                                    onChange={e => setFilters({ ...filters, contrast: +e.target.value })} />
+                            </label>
+                            <label>Grayscale: {filters.grayscale}%
+                                <input type="range" min="0" max="100" value={filters.grayscale}
+                                    onChange={e => setFilters({ ...filters, grayscale: +e.target.value })} />
+                            </label>
+                            <label>Sepia: {filters.sepia}%
+                                <input type="range" min="0" max="100" value={filters.sepia}
+                                    onChange={e => setFilters({ ...filters, sepia: +e.target.value })} />
+                            </label>
+                        </div>
+                    </details>
+                </div>
+            </fieldset>
+
 
             <button disabled={submitting || !canSubmit}>{submitting ? 'Saving…' : 'Save changes'}</button>
             {err && <p style={{ color: 'crimson' }}>{err}</p>}

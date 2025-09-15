@@ -63,6 +63,7 @@ model Moment {
   jobs              ReminderJob[]
   logs              DeliveryLog[]
   skips             RecurrenceSkip[]
+  followers         Follow[] 
 
   @@index([visibility])
   @@index([userId, createdAt])
@@ -95,6 +96,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   moments       Moment[]
+  follows       Follow[]
 }
 
 model Account {
@@ -259,4 +261,16 @@ model UniqueSeen {
 
   @@unique([momentId, day, ipHash])
   @@index([momentId, day])
+}
+
+model Follow {
+  id        String  @id @default(cuid())
+  userId    String
+  momentId  String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moment    Moment  @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, momentId])
+  @@index([momentId, userId])
 }

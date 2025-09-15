@@ -24,6 +24,19 @@ export default async function Dashboard() {
         },
     });
 
+    const following = await prisma.follow.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        include: {
+            moment: {
+                select: {
+                    id: true, title: true, slug: true, createdAt: true,
+                    visibility: true, views: true, uniques: true, cheerCount: true, userId: true
+                }
+            }
+        }
+    });
+
     const totals = moments.reduce(
         (a, m) => {
             a.count += 1;
@@ -150,6 +163,13 @@ export default async function Dashboard() {
             boxShadow: "0 12px 36px rgba(0,0,0,0.35)",
             overflow: "hidden"
         },
+        listTitle: {
+            padding: "12px 16px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            fontWeight: 700,
+            color: "#EAF2FF",
+            letterSpacing: "0.01em"
+        },
         row: {
             padding: "14px 16px",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
@@ -240,6 +260,7 @@ export default async function Dashboard() {
                 </section>
 
                 <section style={styles.listCard}>
+                    <div style={styles.listTitle}>My Countdowns</div>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                         {moments.map(m => (
                             <li key={m.id} className="row" style={styles.row}>
@@ -280,6 +301,49 @@ export default async function Dashboard() {
                                     </svg>
                                     Create your first countdown
                                 </a>
+                            </li>
+                        )}
+                    </ul>
+                </section>
+
+                <section style={styles.listCard}>
+                    <div style={styles.listTitle}>Following</div>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                        {following.map(f => {
+                            const m = f.moment;
+                            return (
+                                <li key={f.id} className="row" style={styles.row}>
+                                    <div style={styles.left}>
+                                        <a href={`/c/${m.slug}`} style={styles.titleLink}>{m.title}</a>
+                                        <div style={styles.meta}>
+                                            <span style={styles.metaBadge}>/c/{m.slug}</span>
+                                            <span style={styles.metaBadge}>{m.visibility}</span>
+                                            {typeof m.views === "number" && typeof m.uniques === "number" && (
+                                                <span style={styles.metaBadge}>👁 {m.views} / {m.uniques}</span>
+                                            )}
+                                            {typeof m.cheerCount === "number" && (
+                                                <span style={styles.metaBadge}>🎉 {m.cheerCount}</span>
+                                            )}
+                                            <span style={styles.metaBadge}>
+                                                {new Date(m.createdAt).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={styles.rightActions}>
+                                        <a href={`/c/${m.slug}`} style={styles.actionLink}>Open</a>
+                                        <form action={`/api/moments/${m.slug}/follow`} method="post">
+                                            <input type="hidden" name="op" value="unfollow" />
+                                            <button style={styles.deleteBtn}>Unfollow</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                        {following.length === 0 && (
+                            <li style={styles.empty}>
+                                <div style={{ textAlign: "center", color: "#B9C6DD" }}>
+                                    You are not following any countdowns yet.
+                                </div>
                             </li>
                         )}
                     </ul>

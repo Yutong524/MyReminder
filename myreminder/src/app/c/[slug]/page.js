@@ -8,6 +8,9 @@ import { cookieNameFor, verifyAccessToken } from '@/lib/access';
 import AccessGateClient from './passcode-client';
 import CheerGuestbook from './social-client';
 import AnalyticsTracker from './analytics-client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import FollowButton from './follow-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +23,7 @@ export default async function CountdownPage({ params }) {
             id: true, title: true, slug: true, targetUtc: true, timeZone: true, theme: true, visibility: true,
             bgImageUrl: true, bgSize: true, bgPosition: true, bgOpacity: true, bgBlend: true, bgFilters: true,
             titleColor: true, timeColor: true,
+            userId: true,
 
             bgmUrl: true, bgmLoop: true, bgmVolume: true,
             endSoundKey: true, endSoundUrl: true, endSoundVolume: true,
@@ -28,6 +32,16 @@ export default async function CountdownPage({ params }) {
         }
     });
     if (!m) return notFound();
+
+    const session = await getServerSession(authOptions);
+    let initialFollowed = false;
+    if (session?.user?.id && m.userId !== session.user.id) {
+        const f = await prisma.follow.findFirst({
+            where: { userId: session.user.id, momentId: m.id },
+            select: { id: true }
+        });
+        initialFollowed = !!f;
+    }
 
     if (m.visibility === 'PRIVATE') {
         const token = cookies().get(cookieNameFor(slug))?.value;
@@ -133,6 +147,7 @@ export default async function CountdownPage({ params }) {
         rowCenter: { gridRow: 2, display: 'grid', placeItems: 'center' },
         rowBottom: { gridRow: 3, display: 'grid', placeItems: 'center' },
         topChips: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
+        followWrap: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginLeft: 8 },
 
         chip: {
             display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 12px',
@@ -242,6 +257,23 @@ export default async function CountdownPage({ params }) {
                             </svg>
                             Time left · {humanizeRemaining(m.targetUtc.toISOString())}
                         </span>
+
+                        {!!session && m.userId !== session.user.id && (
+                            <span style={styles.followWrap}>
+                                <FollowButton slug={slug} initialFollowed={initialFollowed} />
+                            </span>
+                        )}
+                        {!session && (
+                            <a href={`/api/auth/signin?callbackUrl=/c/${slug}`} style={{ textDecoration: 'none' }}>
+                                <span style={styles.chip} className="chip">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 5v14M5 12h14" stroke="#7FB3FF" strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                    Sign in to follow
+                                </span>
+                            </a>
+                        )}
+
                     </div>
 
                     <h1 style={styles.title}>{m.title}</h1>

@@ -35,7 +35,7 @@ model Moment {
   user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   passcodeHash      String?
   slackWebhookUrl   String?
-  smsPhone          String? // E.164 e.g. +14155551234
+  smsPhone          String? // E.164 e.g. 14155551234
   discordWebhookUrl String? // https://discord.com/api/webhooks/{id}/{token}
   bgmUrl            String?
   bgmLoop           Boolean          @default(true)
@@ -63,11 +63,16 @@ model Moment {
   jobs              ReminderJob[]
   logs              DeliveryLog[]
   skips             RecurrenceSkip[]
-  followers         Follow[] 
+  followers         Follow[]
+  isEpic            Boolean          @default(false)
+  epicTags          String[]         @default([])
+  epicFeaturedAt    DateTime?
+  epicApplications  EpicApplication[]
 
   @@index([visibility])
   @@index([userId, createdAt])
   @@index([rrule])
+  @@index([isEpic, epicFeaturedAt])
 }
 
 model RecurrenceSkip {
@@ -97,6 +102,7 @@ model User {
   sessions      Session[]
   moments       Moment[]
   follows       Follow[]
+  epicApplications EpicApplication[]
 }
 
 model Account {
@@ -273,4 +279,28 @@ model Follow {
 
   @@unique([userId, momentId])
   @@index([momentId, userId])
+}
+
+enum EpicApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model EpicApplication {
+  id         String                @id @default(cuid())
+  userId     String
+  momentId   String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moment     Moment                @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  reason     String
+  tags       String[]              @default([])
+  status     EpicApplicationStatus @default(PENDING)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  @@unique([userId, momentId])
+  @@index([status, createdAt])
 }

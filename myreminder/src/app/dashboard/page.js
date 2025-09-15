@@ -195,6 +195,18 @@ export default async function Dashboard() {
             marginRight: 6,
             background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))"
         },
+        epicBadge: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "2px 8px",
+            borderRadius: "999px",
+            border: "1px solid rgba(255,215,0,0.35)",
+            marginRight: 6,
+            background: "linear-gradient(180deg, rgba(255,215,0,0.18), rgba(255,215,0,0.08))",
+            color: "#FFE58A",
+            fontWeight: 700
+        },
         rightActions: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" },
         actionLink: {
             textDecoration: "none",
@@ -204,6 +216,15 @@ export default async function Dashboard() {
             background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
             color: "#C7D3E8",
             fontSize: 13
+        },
+        actionBtn: {
+            borderRadius: "10px",
+            padding: "8px 10px",
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+            color: "#C7D3E8",
+            fontSize: 13,
+            cursor: "pointer"
         },
         deleteBtn: {
             borderRadius: "10px",
@@ -255,6 +276,7 @@ export default async function Dashboard() {
                             </a>
                             <a href="/api/export" rel="nofollow" className="lp" style={styles.linkGhost}>Download my data (JSON)</a>
                             <a href="/api/export?format=csv" rel="nofollow" className="lp" style={styles.linkGhost}>Download moments (CSV)</a>
+                            <a href="/epic" className="lp" style={styles.linkGhost}>Browse Epic</a>
                         </div>
                     </div>
                 </section>
@@ -269,6 +291,19 @@ export default async function Dashboard() {
                                     <div style={styles.meta}>
                                         <span style={styles.metaBadge}>/c/{m.slug}</span>
                                         <span style={styles.metaBadge}>{m.visibility}</span>
+
+                                        {m.isEpic && (
+                                            <span style={styles.epicBadge}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path d="M12 3l2.5 5.2L20 9l-4 3.9.9 5.6L12 15.9 7.1 18.5 8 12.9 4 9l5.5-.8L12 3z" stroke="#FFD700" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                                EPIC
+                                            </span>
+                                        )}
+                                        {!m.isEpic && (m.epicApplications?.[0]?.status) && (
+                                            <span style={styles.metaBadge}>Epic: {m.epicApplications[0].status}</span>
+                                        )}
+
                                         {typeof m.views === "number" && typeof m.uniques === "number" && (
                                             <span style={styles.metaBadge}>👁 {m.views} / {m.uniques}</span>
                                         )}
@@ -284,6 +319,19 @@ export default async function Dashboard() {
                                     <a href={`/c/${m.slug}/edit`} style={styles.actionLink}>Edit</a>
                                     <a href={`/api/moments/${m.slug}/analytics`} rel="nofollow" style={styles.actionLink}>Analytics</a>
                                     <a href={`/api/moments/${m.slug}/export`} rel="nofollow" style={styles.actionLink}>Export</a>
+
+                                    {m.isEpic ? (
+                                        <a href={`/epic?mine=1`} style={styles.actionLink}>Manage Epic</a>
+                                    ) : (m.epicApplications?.[0]?.status === "PENDING" ? (
+                                        <span style={styles.actionLink}>Epic: Pending</span>
+                                    ) : (
+                                        <form action={`/api/epic/apply`} method="post">
+                                            <input type="hidden" name="slug" value={m.slug} />
+                                            <input type="hidden" name="reason" value="Please consider this countdown for Epic." />
+                                            <button style={styles.actionBtn} type="submit">Apply Epic</button>
+                                        </form>
+                                    ))}
+
                                     <form action={`/api/moments/${m.slug}/delete`} method="post">
                                         <button style={styles.deleteBtn}>Delete</button>
                                     </form>
@@ -318,6 +366,16 @@ export default async function Dashboard() {
                                         <div style={styles.meta}>
                                             <span style={styles.metaBadge}>/c/{m.slug}</span>
                                             <span style={styles.metaBadge}>{m.visibility}</span>
+
+                                            {m.isEpic && (
+                                                <span style={styles.epicBadge}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                        <path d="M12 3l2.5 5.2L20 9l-4 3.9.9 5.6L12 15.9 7.1 18.5 8 12.9 4 9l5.5-.8L12 3z" stroke="#FFD700" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    EPIC
+                                                </span>
+                                            )}
+
                                             {typeof m.views === "number" && typeof m.uniques === "number" && (
                                                 <span style={styles.metaBadge}>👁 {m.views} / {m.uniques}</span>
                                             )}

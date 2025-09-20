@@ -24,7 +24,8 @@ export const authOptions = {
     session: { strategy: "database" },
     pages: {
         signIn: "/signin",
-        error: "/signin",
+        verifyRequest: "/verify-request",
+        error: "/signin"
     },
     callbacks: {
         async session({ session, user }) {

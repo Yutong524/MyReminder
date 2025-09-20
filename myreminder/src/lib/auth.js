@@ -23,6 +23,8 @@ export const authOptions = {
     ],
     session: { strategy: "database" },
     pages: {
+        signIn: "/signin",
+        error: "/signin",
     },
     callbacks: {
         async session({ session, user }) {
@@ -30,6 +32,7 @@ export const authOptions = {
             return session;
         },
     },
+    trustHost: true,
     secret: process.env.AUTH_SECRET,
 };
 

@@ -264,7 +264,7 @@ export default async function CountdownPage({ params }) {
                             </span>
                         )}
                         {!session && (
-                            <a href={`/api/auth/signin?callbackUrl=/c/${slug}`} style={{ textDecoration: 'none' }}>
+                            <a href={`/signin?callbackUrl=/c/${slug}`} style={{ textDecoration: 'none' }}>
                                 <span style={styles.chip} className="chip">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                         <path d="M12 5v14M5 12h14" stroke="#7FB3FF" strokeWidth="2" strokeLinecap="round" />

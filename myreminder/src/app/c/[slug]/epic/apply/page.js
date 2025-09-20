@@ -10,7 +10,7 @@ export default async function ApplyEpicPage({ params }) {
 
     const session = await getServerSession(authOptions);
     if (!session) {
-        redirect(`/api/auth/signin?callbackUrl=/c/${slug}/epic/apply`);
+        redirect(`/signin?callbackUrl=/c/${slug}/epic/apply`);
     }
 
     const m = await prisma.moment.findUnique({

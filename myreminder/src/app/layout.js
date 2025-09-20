@@ -62,6 +62,11 @@ export default function RootLayout({ children }) {
       alignItems: 'center',
       gap: 10
     },
+    iconBtn: {
+      width: 38,
+      padding: 0,
+      justifyContent: 'center'
+    },
     linkBase: {
       display: 'inline-flex',
       alignItems: 'center',
@@ -122,6 +127,14 @@ export default function RootLayout({ children }) {
                 <a href="/dashboard" className="navLink navGhost" style={{ ...styles.linkBase, ...styles.linkGhost }}>My Countdowns</a>
                 <a href="/api/auth/signin" className="navLink navGhost hide-sm" style={{ ...styles.linkBase, ...styles.linkGhost }}>Sign in</a>
                 <a href="/api/auth/signout" className="navLink navGhost hide-sm" style={{ ...styles.linkBase, ...styles.linkGhost }}>Sign out</a>
+                <a href="/account" aria-label="Account" title="Account"
+                  className="navLink navGhost"
+                  style={{ ...styles.linkBase, ...styles.linkGhost, ...styles.iconBtn }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={styles.icon}>
+                    <circle cx="12" cy="8" r="4.2" stroke="#C7D3E8" strokeWidth="1.6" />
+                    <path d="M4.8 19.2a7.2 7.2 0 0 1 14.4 0" stroke="#C7D3E8" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </a>
                 <a href="/new" className="navLink navPrimary" style={{ ...styles.linkBase, ...styles.linkPrimary }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={styles.icon}>
                     <path d="M5 12h14M12 5l7 7-7 7" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

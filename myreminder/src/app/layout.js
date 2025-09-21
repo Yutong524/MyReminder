@@ -1,5 +1,7 @@
 import './globals.css';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -12,7 +14,15 @@ export const metadata = {
   twitter: { card: 'summary_large_image' },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const ADMIN_LIST = (process.env.ADMIN_EMAILS || 'inspirexyt@gmail.com')
+    .split(/[,\s]+/)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  const session = await getServerSession(authOptions);
+  const isAdmin =
+    !!session?.user?.email &&
+    ADMIN_LIST.includes(String(session.user.email).toLowerCase());
   const styles = {
     body: {
       minHeight: '100vh',
@@ -127,6 +137,14 @@ export default function RootLayout({ children }) {
                 <a href="/dashboard" className="navLink navGhost" style={{ ...styles.linkBase, ...styles.linkGhost }}>My Countdowns</a>
                 <a href="/api/auth/signin" className="navLink navGhost hide-sm" style={{ ...styles.linkBase, ...styles.linkGhost }}>Sign in</a>
                 <a href="/api/auth/signout" className="navLink navGhost hide-sm" style={{ ...styles.linkBase, ...styles.linkGhost }}>Sign out</a>
+                {isAdmin && (
+                  <a href="/admin/epic" className="navLink navGhost" style={{ ...styles.linkBase, ...styles.linkGhost }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={styles.icon}>
+                      <path d="M12 3l2.7 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17.8 6.5 20.1l1.1-6.2L3 9.5l6.3-.9L12 3z" stroke="#FFC107" strokeWidth="1.4" fill="none" />
+                    </svg>
+                    Epic Admin
+                  </a>
+                )}
                 <a href="/account" aria-label="Account" title="Account"
                   className="navLink navGhost"
                   style={{ ...styles.linkBase, ...styles.linkGhost, ...styles.iconBtn }}>

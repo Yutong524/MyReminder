@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import Email from "next-auth/providers/email";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import { isAdminEmail } from "@/lib/admins";
 
 export const authOptions = {
     adapter: PrismaAdapter(prisma),
@@ -31,6 +32,7 @@ export const authOptions = {
         async session({ session, user }) {
             if (session?.user) {
                 session.user.id = user.id;
+                session.user.isAdmin = isAdminEmail(user.email);
                 session.user.twoFactorEnabled = !!user.twoFactorEnabled;
             }
             return session;

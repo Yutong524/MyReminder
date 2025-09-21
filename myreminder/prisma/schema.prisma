@@ -63,6 +63,9 @@ model Moment {
   jobs              ReminderJob[]
   logs              DeliveryLog[]
   skips             RecurrenceSkip[]
+  isEpic            Boolean          @default(false)
+  epicCategory      String?
+  epicApplications  EpicApplication[]
   followers         Follow[]
   isEpic            Boolean          @default(false)
   epicTags          String[]         @default([])
@@ -73,6 +76,7 @@ model Moment {
   @@index([userId, createdAt])
   @@index([rrule])
   @@index([isEpic, epicFeaturedAt])
+  @@index([isEpic, epicCategory])
 }
 
 model RecurrenceSkip {
@@ -307,4 +311,29 @@ model EpicApplication {
 
   @@unique([userId, momentId])
   @@index([status, createdAt])
+}
+
+enum EpicStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model EpicApplication {
+  id             String      @id @default(cuid())
+  momentId       String
+  moment         Moment      @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  applicantId    String
+  applicant      User        @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  category       String?
+  note           String?
+  status         EpicStatus  @default(PENDING)
+  decidedById    String?
+  decidedBy      User?       @relation("EpicDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt      DateTime?
+  reason         String?
+  createdAt      DateTime    @default(now())
+
+  @@index([status, createdAt])
+  @@index([momentId, status])
 }

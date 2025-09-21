@@ -10,6 +10,7 @@ export default async function AccountPage() {
     if (!session) redirect(`/api/auth/signin?callbackUrl=/account`);
 
     const email = session.user?.email || "";
+    const twoFAEnabled = !!session.user?.twoFactorEnabled;
 
     const styles = {
         page: {
@@ -65,8 +66,8 @@ export default async function AccountPage() {
             <div style={styles.shell}>
                 <section style={styles.card}>
                     <h1 style={styles.h1}>Account</h1>
-                    <p style={styles.sub}>Manage your sign-in email.</p>
-                    <AccountClient initialEmail={email} />
+                    <p style={styles.sub}>Manage email & two-factor authentication.</p>
+                    <AccountClient initialEmail={email} initialTwoFA={twoFAEnabled} />
                 </section>
             </div>
         </main>

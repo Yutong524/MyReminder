@@ -103,6 +103,10 @@ model User {
   moments       Moment[]
   follows       Follow[]
   epicApplications EpicApplication[]
+  twoFactorEnabled     Boolean    @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[]   @default([])
+  twoFactorVerifiedAt  DateTime?
 }
 
 model Account {

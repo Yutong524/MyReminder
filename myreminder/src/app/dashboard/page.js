@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }) {
     const session = await getServerSession(authOptions);
     if (!session) {
         redirect(`/signin?callbackUrl=/dashboard`);
@@ -21,6 +21,13 @@ export default async function Dashboard() {
             views: true,
             uniques: true,
             cheerCount: true,
+            theme: true,
+            isEpic: true,
+            epicApplications: {
+                select: { status: true, createdAt: true },
+                orderBy: { createdAt: "desc" },
+                take: 1
+            }
         },
     });
 
@@ -31,11 +38,52 @@ export default async function Dashboard() {
             moment: {
                 select: {
                     id: true, title: true, slug: true, createdAt: true,
-                    visibility: true, views: true, uniques: true, cheerCount: true, userId: true
+                    visibility: true, views: true, uniques: true, cheerCount: true, userId: true,
+                    isEpic: true
                 }
             }
         }
     });
+
+    const sp = Object.fromEntries(Object.entries(searchParams || {}));
+    const sortEpic = String(sp.sortEpic || "created_desc");
+    const sortOther = String(sp.sortOther || "created_desc");
+    const themeFilter = String(sp.theme || "all");
+
+    const themeSet = new Set();
+    moments.forEach(m => { if (m.theme) themeSet.add(m.theme); });
+    const themes = ["all", ...Array.from(themeSet)];
+
+    const filtered = themeFilter === "all"
+        ? moments
+        : moments.filter(m => (m.theme || "default") === themeFilter);
+
+    const epicGroup = filtered.filter(m => m.isEpic === true);
+    const otherGroup = filtered.filter(m => !m.isEpic);
+
+    function applySort(arr, sortKey) {
+        const by = (fn) => (a, b) => fn(b) - fn(a);
+        const byAsc = (fn) => (a, b) => fn(a) - fn(b);
+        switch (sortKey) {
+            case "created_asc": return arr.sort(byAsc(m => new Date(m.createdAt).getTime()));
+            case "views_desc": return arr.sort(by(m => Number(m.views || 0)));
+            case "cheers_desc": return arr.sort(by(m => Number(m.cheerCount || 0)));
+            case "created_desc":
+            default: return arr.sort(by(m => new Date(m.createdAt).getTime()));
+        }
+    }
+    applySort(epicGroup, sortEpic);
+    applySort(otherGroup, sortOther);
+
+    function hrefWith(updates) {
+        const q = new URLSearchParams(sp);
+        Object.entries(updates).forEach(([k, v]) => {
+            if (v === undefined || v === null || v === "") q.delete(k);
+            else q.set(k, String(v));
+        });
+        const qs = q.toString();
+        return qs ? `?${qs}` : `?`;
+    }
 
     const totals = moments.reduce(
         (a, m) => {
@@ -170,6 +218,31 @@ export default async function Dashboard() {
             color: "#EAF2FF",
             letterSpacing: "0.01em"
         },
+        sectionBar: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            padding: "10px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))"
+        },
+        subPills: { display: "flex", gap: 6, flexWrap: "wrap" },
+        sortLink: {
+            textDecoration: "none",
+            borderRadius: "999px",
+            padding: "6px 10px",
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+            color: "#C7D3E8",
+            fontSize: 12
+        },
+        sortLinkActive: {
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "linear-gradient(180deg, #0D63E5 0%, #0A4BBB 100%)",
+            color: "#FFF",
+            boxShadow: "0 8px 16px rgba(13,99,229,0.25), inset 0 1px 0 rgba(255,255,255,0.20)"
+        },
         row: {
             padding: "14px 16px",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
@@ -281,10 +354,39 @@ export default async function Dashboard() {
                     </div>
                 </section>
 
+
                 <section style={styles.listCard}>
-                    <div style={styles.listTitle}>My Countdowns</div>
+                    <div style={styles.listTitle}>Filter by Template</div>
+                    <div style={styles.sectionBar}>
+                        <div style={styles.subPills}>
+                            {themes.map(th => {
+                                const active = th === themeFilter;
+                                return (
+                                    <a key={th} href={hrefWith({ theme: th })}
+                                        style={{ ...styles.sortLink, ...(active ? styles.sortLinkActive : {}) }}>
+                                        {th === "all" ? "All" : th}
+                                    </a>
+                                );
+                            })}
+                        </div>
+                        <span style={{ color: "#8FA5C6", fontSize: 12 }}>Theme: {themeFilter}</span>
+                    </div>
+                </section>
+
+                <section style={styles.listCard}>
+                    <div style={styles.listTitle}>Epic Countdowns</div>
+                    <div style={styles.sectionBar}>
+                        <div style={styles.subPills}>
+                            <a href={hrefWith({ sortEpic: "created_desc" })} style={{ ...styles.sortLink, ...(sortEpic === "created_desc" ? styles.sortLinkActive : {}) }}>Newest</a>
+                            <a href={hrefWith({ sortEpic: "created_asc" })} style={{ ...styles.sortLink, ...(sortEpic === "created_asc" ? styles.sortLinkActive : {}) }}>Oldest</a>
+                            <a href={hrefWith({ sortEpic: "views_desc" })} style={{ ...styles.sortLink, ...(sortEpic === "views_desc" ? styles.sortLinkActive : {}) }}>Most Views</a>
+                            <a href={hrefWith({ sortEpic: "cheers_desc" })} style={{ ...styles.sortLink, ...(sortEpic === "cheers_desc" ? styles.sortLinkActive : {}) }}>Most Cheers</a>
+                        </div>
+                        <span style={{ color: "#8FA5C6", fontSize: 12 }}>Sorted: {sortEpic}</span>
+                    </div>
+
                     <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                        {moments.map(m => (
+                        {epicGroup.map(m => (
                             <li key={m.id} className="row" style={styles.row}>
                                 <div style={styles.left}>
                                     <a href={`/c/${m.slug}`} style={styles.titleLink}>{m.title}</a>
@@ -300,9 +402,6 @@ export default async function Dashboard() {
                                                 EPIC
                                             </span>
                                         )}
-                                        {!m.isEpic && (m.epicApplications?.[0]?.status) && (
-                                            <span style={styles.metaBadge}>Epic: {m.epicApplications[0].status}</span>
-                                        )}
 
                                         {typeof m.views === "number" && typeof m.uniques === "number" && (
                                             <span style={styles.metaBadge}>👁 {m.views} / {m.uniques}</span>
@@ -310,6 +409,7 @@ export default async function Dashboard() {
                                         {typeof m.cheerCount === "number" && (
                                             <span style={styles.metaBadge}>🎉 {m.cheerCount}</span>
                                         )}
+                                        <span style={styles.metaBadge}>{m.theme}</span>
                                         <span style={styles.metaBadge}>
                                             {new Date(m.createdAt).toLocaleString()}
                                         </span>
@@ -320,9 +420,63 @@ export default async function Dashboard() {
                                     <a href={`/api/moments/${m.slug}/analytics`} rel="nofollow" style={styles.actionLink}>Analytics</a>
                                     <a href={`/api/moments/${m.slug}/export`} rel="nofollow" style={styles.actionLink}>Export</a>
 
-                                    {m.isEpic ? (
-                                        <a href={`/epic?mine=1`} style={styles.actionLink}>Manage Epic</a>
-                                    ) : (m.epicApplications?.[0]?.status === "PENDING" ? (
+                                    <a href={`/epic?mine=1`} style={styles.actionLink}>Manage Epic</a>
+                                    <form action={`/api/moments/${m.slug}/delete`} method="post">
+                                        <button style={styles.deleteBtn}>Delete</button>
+                                    </form>
+                                </div>
+                            </li>
+                        ))}
+                        {epicGroup.length === 0 && (
+                            <li style={styles.empty}>
+                                <div style={{ textAlign: "center", color: "#B9C6DD" }}>
+                                    No Epic items under current filter.
+                                </div>
+                            </li>
+                        )}
+                    </ul>
+                </section>
+
+                <section style={styles.listCard}>
+                    <div style={styles.listTitle}>Other Countdowns</div>
+                    <div style={styles.sectionBar}>
+                        <div style={styles.subPills}>
+                            <a href={hrefWith({ sortOther: "created_desc" })} style={{ ...styles.sortLink, ...(sortOther === "created_desc" ? styles.sortLinkActive : {}) }}>Newest</a>
+                            <a href={hrefWith({ sortOther: "created_asc" })} style={{ ...styles.sortLink, ...(sortOther === "created_asc" ? styles.sortLinkActive : {}) }}>Oldest</a>
+                            <a href={hrefWith({ sortOther: "views_desc" })} style={{ ...styles.sortLink, ...(sortOther === "views_desc" ? styles.sortLinkActive : {}) }}>Most Views</a>
+                            <a href={hrefWith({ sortOther: "cheers_desc" })} style={{ ...styles.sortLink, ...(sortOther === "cheers_desc" ? styles.sortLinkActive : {}) }}>Most Cheers</a>
+                        </div>
+                        <span style={{ color: "#8FA5C6", fontSize: 12 }}>Sorted: {sortOther}</span>
+                    </div>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                        {otherGroup.map(m => (
+                            <li key={m.id} className="row" style={styles.row}>
+                                <div style={styles.left}>
+                                    <a href={`/c/${m.slug}`} style={styles.titleLink}>{m.title}</a>
+                                    <div style={styles.meta}>
+                                        <span style={styles.metaBadge}>/c/{m.slug}</span>
+                                        <span style={styles.metaBadge}>{m.visibility}</span>
+                                        {!m.isEpic && (m.epicApplications?.[0]?.status) && (
+                                            <span style={styles.metaBadge}>Epic: {m.epicApplications[0].status}</span>
+                                        )}
+                                        {typeof m.views === "number" && typeof m.uniques === "number" && (
+                                            <span style={styles.metaBadge}>👁 {m.views} / {m.uniques}</span>
+                                        )}
+                                        {typeof m.cheerCount === "number" && (
+                                            <span style={styles.metaBadge}>🎉 {m.cheerCount}</span>
+                                        )}
+                                        <span style={styles.metaBadge}>{m.theme}</span>
+                                        <span style={styles.metaBadge}>
+                                            {new Date(m.createdAt).toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style={styles.rightActions}>
+                                    <a href={`/c/${m.slug}/edit`} style={styles.actionLink}>Edit</a>
+                                    <a href={`/api/moments/${m.slug}/analytics`} rel="nofollow" style={styles.actionLink}>Analytics</a>
+                                    <a href={`/api/moments/${m.slug}/export`} rel="nofollow" style={styles.actionLink}>Export</a>
+
+                                    {m.epicApplications?.[0]?.status === "PENDING" ? (
                                         <span style={styles.actionLink}>Epic: Pending</span>
                                     ) : (
                                         <form action={`/api/epic/apply`} method="post">
@@ -330,7 +484,7 @@ export default async function Dashboard() {
                                             <input type="hidden" name="reason" value="Please consider this countdown for Epic." />
                                             <button style={styles.actionBtn} type="submit">Apply Epic</button>
                                         </form>
-                                    ))}
+                                    )}
 
                                     <form action={`/api/moments/${m.slug}/delete`} method="post">
                                         <button style={styles.deleteBtn}>Delete</button>
@@ -338,17 +492,11 @@ export default async function Dashboard() {
                                 </div>
                             </li>
                         ))}
-                        {moments.length === 0 && (
+                        {otherGroup.length === 0 && (
                             <li style={styles.empty}>
                                 <div style={{ textAlign: "center", color: "#B9C6DD" }}>
-                                    No items yet.
+                                    No non-Epic items under current filter.
                                 </div>
-                                <a href="/new" className="lp primary" style={styles.linkPrimary}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                        <path d="M5 12h14M12 5l7 7-7 7" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    Create your first countdown
-                                </a>
                             </li>
                         )}
                     </ul>

@@ -63,14 +63,13 @@ model Moment {
   jobs              ReminderJob[]
   logs              DeliveryLog[]
   skips             RecurrenceSkip[]
-  isEpic            Boolean          @default(false)
-  epicCategory      String?
-  epicApplications  EpicApplication[]
   followers         Follow[]
-  isEpic            Boolean          @default(false)
-  epicTags          String[]         @default([])
-  epicFeaturedAt    DateTime?
-  epicApplications  EpicApplication[]
+
+  isEpic           Boolean           @default(false)
+  epicCategory     String?
+  epicTags         String[]          @default([])
+  epicFeaturedAt   DateTime?
+  epicApplications EpicApplication[]
 
   @@index([visibility])
   @@index([userId, createdAt])
@@ -97,20 +96,22 @@ enum Visibility {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  moments       Moment[]
-  follows       Follow[]
-  epicApplications EpicApplication[]
-  twoFactorEnabled     Boolean    @default(false)
+  id                   String            @id @default(cuid())
+  name                 String?
+  email                String?           @unique
+  emailVerified        DateTime?
+  image                String?
+  accounts             Account[]
+  sessions             Session[]
+  moments              Moment[]
+  follows              Follow[]
+  epicApplications     EpicApplication[]
+  epicDecisions        EpicApplication[] @relation("EpicDecider")
+  twoFactorEnabled     Boolean           @default(false)
   twoFactorSecret      String?
-  twoFactorBackupCodes String[]   @default([])
+  twoFactorBackupCodes String[]          @default([])
   twoFactorVerifiedAt  DateTime?
+  SecurityEvent        SecurityEvent[]
 }
 
 model Account {
@@ -132,11 +133,16 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
+  id           String    @id @default(cuid())
+  sessionToken String    @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip           String?
+  userAgent    String?
+  lastSeenAt   DateTime? @default(now())
+
+  @@index([userId, lastSeenAt])
 }
 
 model VerificationToken {
@@ -278,11 +284,11 @@ model UniqueSeen {
 }
 
 model Follow {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   momentId  String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moment    Moment  @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moment    Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([userId, momentId])
@@ -295,24 +301,6 @@ enum EpicApplicationStatus {
   REJECTED
 }
 
-model EpicApplication {
-  id         String                @id @default(cuid())
-  userId     String
-  momentId   String
-  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moment     Moment                @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  reason     String
-  tags       String[]              @default([])
-  status     EpicApplicationStatus @default(PENDING)
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
-  reviewedAt DateTime?
-  reviewedBy String?
-
-  @@unique([userId, momentId])
-  @@index([status, createdAt])
-}
-
 enum EpicStatus {
   PENDING
   APPROVED
@@ -320,20 +308,46 @@ enum EpicStatus {
 }
 
 model EpicApplication {
-  id             String      @id @default(cuid())
-  momentId       String
-  moment         Moment      @relation(fields: [momentId], references: [id], onDelete: Cascade)
-  applicantId    String
-  applicant      User        @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  category       String?
-  note           String?
-  status         EpicStatus  @default(PENDING)
-  decidedById    String?
-  decidedBy      User?       @relation("EpicDecider", fields: [decidedById], references: [id], onDelete: SetNull)
-  decidedAt      DateTime?
-  reason         String?
-  createdAt      DateTime    @default(now())
+  id          String     @id @default(cuid())
+  momentId    String
+  moment      Moment     @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  applicantId String
+  applicant   User       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  category    String?
+  note        String?
+  status      EpicStatus @default(PENDING)
+  decidedById String?
+  decidedBy   User?      @relation("EpicDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt   DateTime?
+  reason      String?
+  createdAt   DateTime   @default(now())
 
   @@index([status, createdAt])
   @@index([momentId, status])
+}
+
+enum SecurityEventType {
+  SIGN_IN
+  SIGN_OUT
+  SESSION_REVOKED
+  TWOFA_ENABLED
+  TWOFA_DISABLED
+  EMAIL_CHANGED
+  BACKUP_CODES_VIEWED
+  BACKUP_CODE_USED
+  LINKED_GOOGLE
+  UNLINKED_GOOGLE
+}
+
+model SecurityEvent {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      SecurityEventType
+  ip        String?
+  userAgent String?
+  meta      Json?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, createdAt])
 }

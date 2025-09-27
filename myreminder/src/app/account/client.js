@@ -22,6 +22,13 @@ export default function AccountClient({
     const [backupForEmail, setBackupForEmail] = useState('');
     const [linked, setLinked] = useState(initialLinked);
     const [unlinking, setUnlinking] = useState(false);
+    const [sessions, setSessions] = useState([]);
+    const [loadingSess, setLoadingSess] = useState(false);
+    const [revoking, setRevoking] = useState(null);
+    const [revokingAll, setRevokingAll] = useState(false);
+
+    const [events, setEvents] = useState([]);
+    const [loadingLog, setLoadingLog] = useState(false);
 
     useEffect(() => {
         setTwoFAEnabled(!!initialTwoFA);
@@ -30,6 +37,55 @@ export default function AccountClient({
     useEffect(() => {
         setLinked(initialLinked || []);
     }, [initialLinked]);
+
+    async function loadSessions() {
+        setLoadingSess(true);
+        const r = await fetch('/api/account/sessions', { cache: 'no-store' });
+        const j = await r.json().catch(() => ({}));
+        setLoadingSess(false);
+        if (r.ok) setSessions(j.items || []);
+    }
+
+    async function revokeOne(id) {
+        setRevoking(id);
+        setErr(''); setMsg('');
+        const r = await fetch('/api/account/sessions/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: id })
+        });
+        const j = await r.json().catch(() => ({}));
+        setRevoking(null);
+        if (!r.ok) { setErr(j?.error || 'Revoke failed'); return; }
+        setMsg('Session revoked.');
+        loadSessions();
+    }
+
+    async function revokeOthers() {
+        setRevokingAll(true);
+        setErr(''); setMsg('');
+        const r = await fetch('/api/account/sessions/revoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ allOthers: true })
+        });
+
+        const j = await r.json().catch(() => ({}));
+        setRevokingAll(false);
+        if (!r.ok) { setErr(j?.error || 'Revoke failed'); return; }
+        setMsg('Signed out from other devices.');
+        loadSessions();
+    }
+
+    async function loadSecurityLog() {
+        setLoadingLog(true);
+        const r = await fetch('/api/account/security-events', { cache: 'no-store' });
+        const j = await r.json().catch(() => ({}));
+        setLoadingLog(false);
+        if (r.ok) setEvents(j.items || []);
+    }
+
+    useEffect(() => { loadSessions(); loadSecurityLog(); }, []);
 
     const styles = {
         sec: {
@@ -129,6 +185,23 @@ export default function AccountClient({
             color: '#C7D3E8',
             fontSize: 13,
             letterSpacing: '0.01em'
+        },
+        tag: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '2px 8px',
+            borderRadius: 999,
+            border: '1px solid rgba(255,255,255,0.10)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+            color: '#C7D3E8',
+            fontSize: 12
+        },
+        rowFx: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10
         }
     };
 
@@ -516,6 +589,81 @@ export default function AccountClient({
                             You must keep at least one active sign-in method (email or a linked provider).
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <section style={styles.sec}>
+                <div style={styles.secHead}>Active sessions & devices</div>
+                <div style={styles.secBody}>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        {loadingSess && <div style={styles.hint}>Loading sessions…</div>}
+                        {sessions.map(s => (
+                            <div key={s.id} style={styles.rowFx}>
+                                <div>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        <span style={styles.tag}>{s.current ? 'This device' : 'Signed in'}</span>
+                                        <span style={styles.tag}>{s.ip}</span>
+                                        <span style={styles.tag}>
+                                            {new Date(s.lastSeenAt).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div style={{ ...styles.hint, marginTop: 6, maxWidth: 760, opacity: .9 }}>
+                                        {s.userAgent}
+                                    </div>
+                                </div>
+                                {!s.current && (
+                                    <button
+                                        className="cta"
+                                        style={{ ...styles.btnGhost, ...styles.danger }}
+                                        onClick={() => revokeOne(s.id)}
+                                        disabled={revoking === s.id}
+                                    >
+                                        {revoking === s.id ? 'Revoking…' : 'Revoke'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+
+                        {sessions.length === 0 && !loadingSess && (
+                            <div style={styles.hint}>No active sessions.</div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                                className="cta"
+                                style={{ ...styles.btnGhost }}
+                                onClick={revokeOthers}
+                                disabled={revokingAll}
+                            >
+                                {revokingAll ? 'Signing out…' : 'Sign out from other devices'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section style={styles.sec}>
+                <div style={styles.secHead}>Sign-in history / Security log</div>
+                <div style={styles.secBody}>
+                    {loadingLog && <div style={styles.hint}>Loading log…</div>}
+                    {events.length === 0 && !loadingLog && (
+                        <div style={styles.hint}>No recent security events.</div>
+                    )}
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                        {events.map(ev => (
+                            <li key={ev.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span style={styles.tag}>{ev.type}</span>
+                                    <span style={styles.tag}>{ev.ip || '—'}</span>
+                                    <span style={styles.tag}>{new Date(ev.createdAt).toLocaleString()}</span>
+                                </div>
+                                {ev.userAgent && (
+                                    <div style={{ ...styles.hint, marginTop: 6, opacity: .9 }}>
+                                        {ev.userAgent}
+                                    </div>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </section>
 

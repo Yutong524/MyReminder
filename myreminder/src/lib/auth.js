@@ -4,6 +4,7 @@ import Email from "next-auth/providers/email";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admins";
+import { logSecurityEvent } from "@/lib/security";
 
 export const authOptions = {
     adapter: PrismaAdapter(prisma),
@@ -36,6 +37,18 @@ export const authOptions = {
                 session.user.twoFactorEnabled = !!user.twoFactorEnabled;
             }
             return session;
+        },
+    },
+    events: {
+        async linkAccount({ user, account }) {
+            if (account?.provider === "google") {
+                await logSecurityEvent({ userId: user.id, type: "LINKED_GOOGLE" });
+            }
+        },
+        async signOut({ session }) {
+            if (session?.userId) {
+                await logSecurityEvent({ userId: session.userId, type: "SIGN_OUT" });
+            }
         },
     },
     trustHost: true,

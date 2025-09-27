@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logSecurityEvent } from '@/lib/security';
 
-export async function POST(_req, { params }) {
+export async function POST(req, { params }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,6 +45,13 @@ export async function POST(_req, { params }) {
 
     await prisma.account.delete({
         where: { id: account.id }
+    });
+
+    await logSecurityEvent({
+        userId: session.user.id,
+        type: provider === 'google' ? 'UNLINKED_GOOGLE' : 'UNLINKED_OAUTH',
+        req,
+        meta: { provider }
     });
 
     return NextResponse.json({ ok: true });

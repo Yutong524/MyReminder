@@ -10,7 +10,7 @@ export async function POST(req) {
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { email, totp, code, backupCode } = await req.json().catch(() => ({}));
+    const { email, totp, code, token, backupCode } = await req.json().catch(() => ({}));
     const clean = String(email || '').trim().toLowerCase();
 
     if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
@@ -21,9 +21,9 @@ export async function POST(req) {
         where: { id: session.user.id },
         select: {
             email: true,
-            totpEnabled: true,
-            totpSecret: true,
-            totpBackupCodes: true,
+            twoFactorEnabled: true,
+            twoFactorSecret: true,
+            twoFactorBackupCodes: true,
         }
     });
     if (!me) {
@@ -43,8 +43,14 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     }
 
-    if (me.totpEnabled) {
-        const providedTotp = String(totp || code || '').trim();
+    const ip =
+        req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        req.headers.get('x-real-ip') ||
+        'unknown';
+    const ua = req.headers.get('user-agent') || 'unknown';
+
+    if (me.twoFactorEnabled) {
+        const providedTotp = String(token || totp || code || '').trim();
         const providedBackup = String(backupCode || '').trim();
 
         if (!providedTotp && !providedBackup) {

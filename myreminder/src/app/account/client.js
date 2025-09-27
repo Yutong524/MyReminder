@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 
 export default function AccountClient({
     initialEmail = '',
-    initialTwoFA = false
+    initialTwoFA = false,
+    initialLinked = [],
+    hasEmailLogin = true
 }) {
     const [email, setEmail] = useState(initialEmail);
     const [saving, setSaving] = useState(false);
@@ -18,10 +20,16 @@ export default function AccountClient({
     const [disabling, setDisabling] = useState(false);
     const [otpForEmail, setOtpForEmail] = useState('');
     const [backupForEmail, setBackupForEmail] = useState('');
+    const [linked, setLinked] = useState(initialLinked);
+    const [unlinking, setUnlinking] = useState(false);
 
     useEffect(() => {
         setTwoFAEnabled(!!initialTwoFA);
     }, [initialTwoFA]);
+
+    useEffect(() => {
+        setLinked(initialLinked || []);
+    }, [initialLinked]);
 
     const styles = {
         sec: {
@@ -99,6 +107,28 @@ export default function AccountClient({
             gridTemplateColumns: 'repeat(auto-fill, minmax(120px,1fr))',
             gap: 8,
             marginTop: 10
+        },
+        listRow: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))'
+        },
+        providerBadge: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderRadius: 999,
+            border: '1px solid rgba(255,255,255,0.10)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            color: '#C7D3E8',
+            fontSize: 13,
+            letterSpacing: '0.01em'
         }
     };
 
@@ -206,6 +236,38 @@ export default function AccountClient({
         setMsg('Email updated.');
         setOtpForEmail('');
         setBackupForEmail('');
+    }
+
+    const googleLinked = linked.some(l => l.provider === 'google');
+    const totalSigninMethods = (hasEmailLogin ? 1 : 0) + linked.length;
+    const canUnlink = (provider) => {
+        if (totalSigninMethods <= 1) return false;
+        return true;
+    };
+
+    async function onUnlink(provider, providerAccountId) {
+        if (!canUnlink(provider)) {
+            setErr('You must keep at least one sign-in method.');
+            return;
+        }
+        setErr(''); setMsg('');
+        setUnlinking(true);
+        try {
+            const r = await fetch(`/api/account/unlink/${encodeURIComponent(a.provider)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accountId: acc.id })
+            });
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(j?.error || 'Unlink failed');
+
+            setLinked(prev => prev.filter(a => !(a.provider === provider && a.providerAccountId === providerAccountId)));
+            setMsg('Unlinked successfully.');
+        } catch (e) {
+            setErr(e.message || 'Unlink failed');
+        } finally {
+            setUnlinking(false);
+        }
     }
 
     return (
@@ -396,6 +458,64 @@ export default function AccountClient({
                             </div>
                         </div>
                     )}
+                </div>
+            </section>
+
+            <section style={styles.sec}>
+                <div style={styles.secHead}>Linked accounts</div>
+                <div style={styles.secBody}>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {linked.length === 0 && (
+                            <div style={styles.hint}>No linked providers yet.</div>
+                        )}
+
+                        {linked.map(acc => (
+                            <div key={`${acc.provider}:${acc.providerAccountId}`} style={styles.listRow}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={styles.providerBadge}>
+                                        {acc.provider === 'google' ? (
+                                            <>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="10" stroke="#7FB3FF" strokeWidth="1.4" />
+                                                </svg>
+                                                Google
+                                            </>
+                                        ) : acc.provider}
+                                    </span>
+                                    <code style={{ opacity: .75, fontSize: 12 }}>
+                                        {acc.providerAccountId}
+                                    </code>
+                                </div>
+                                <button
+                                    className="cta"
+                                    style={{ ...styles.btnGhost, ...styles.danger }}
+                                    disabled={unlinking || !canUnlink(acc.provider)}
+                                    onClick={() => onUnlink(acc.provider, acc.providerAccountId)}
+                                    title={!canUnlink(acc.provider) ? 'Keep at least one sign-in method' : 'Unlink this provider'}
+                                >
+                                    {unlinking ? 'Working…' : 'Unlink'}
+                                </button>
+                            </div>
+                        ))}
+
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+                            {!googleLinked ? (
+                                <a
+                                    className="cta"
+                                    style={styles.btn}
+                                    href="/api/auth/signin?provider=google&callbackUrl=/account"
+                                >
+                                    Link Google
+                                </a>
+                            ) : (
+                                <span style={styles.hint}>Google is linked.</span>
+                            )}
+                        </div>
+
+                        <div style={styles.hint}>
+                            You must keep at least one active sign-in method (email or a linked provider).
+                        </div>
+                    </div>
                 </div>
             </section>
 

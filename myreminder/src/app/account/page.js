@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import AccountClient from "./client";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,12 @@ export default async function AccountPage() {
 
     const email = session.user?.email || "";
     const twoFAEnabled = !!session.user?.twoFactorEnabled;
+    const linked = await prisma.account.findMany({
+        where: { userId: session.user.id },
+        select: { id: true, provider: true, providerAccountId: true, type: true },
+        orderBy: [{ provider: "asc" }, { providerAccountId: "asc" }]
+    });
+    const hasEmailLogin = !!email;
 
     const styles = {
         page: {
@@ -67,7 +74,13 @@ export default async function AccountPage() {
                 <section style={styles.card}>
                     <h1 style={styles.h1}>Account</h1>
                     <p style={styles.sub}>Manage email & two-factor authentication.</p>
-                    <AccountClient initialEmail={email} initialTwoFA={twoFAEnabled} />
+                    <p style={styles.sub}>Manage email, linked accounts, and two-factor authentication.</p>
+                    <AccountClient
+                        initialEmail={email}
+                        initialTwoFA={twoFAEnabled}
+                        initialLinked={linked}
+                        hasEmailLogin={hasEmailLogin}
+                    />
                 </section>
             </div>
         </main>

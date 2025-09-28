@@ -16,12 +16,21 @@ export async function GET() {
 
     const rows = await prisma.session.findMany({
         where: { userId: session.user.id },
-        orderBy: { lastSeenAt: "desc" }
+        orderBy: { lastSeenAt: "desc" },
+        select: {
+            id: true,
+            sessionToken: true,
+            label: true,
+            ip: true,
+            userAgent: true,
+            lastSeenAt: true,
+            expires: true
+        }
     });
 
     const items = rows.map((s) => ({
         id: s.id,
-        sessionToken: s.sessionToken,
+        label: s.label || null,
         ip: s.ip || "—",
         userAgent: s.userAgent || "—",
         lastSeenAt: s.lastSeenAt || s.expires,

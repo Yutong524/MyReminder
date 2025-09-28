@@ -12,6 +12,12 @@ export default async function AccountPage() {
 
     const email = session.user?.email || "";
     const twoFAEnabled = !!session.user?.twoFactorEnabled;
+
+    const me = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, image: true }
+    });
+
     const linked = await prisma.account.findMany({
         where: { userId: session.user.id },
         select: { id: true, provider: true, providerAccountId: true, type: true },
@@ -73,13 +79,15 @@ export default async function AccountPage() {
             <div style={styles.shell}>
                 <section style={styles.card}>
                     <h1 style={styles.h1}>Account</h1>
-                    <p style={styles.sub}>Manage email & two-factor authentication.</p>
-                    <p style={styles.sub}>Manage email, linked accounts, and two-factor authentication.</p>
+                    <p style={styles.sub}>
+                        Manage profile, email, linked accounts, two-factor auth, sessions & security.
+                    </p>
                     <AccountClient
                         initialEmail={email}
                         initialTwoFA={twoFAEnabled}
                         initialLinked={linked}
                         hasEmailLogin={hasEmailLogin}
+                        initialProfile={{ name: me?.name || "", image: me?.image || "" }}
                     />
                 </section>
             </div>

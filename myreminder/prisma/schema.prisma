@@ -141,6 +141,7 @@ model Session {
   ip           String?
   userAgent    String?
   lastSeenAt   DateTime? @default(now())
+  label        String?
 
   @@index([userId, lastSeenAt])
 }

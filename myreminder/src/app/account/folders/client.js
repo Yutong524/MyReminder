@@ -1,0 +1,393 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+
+export default function FoldersClient() {
+    const [tree, setTree] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [sel, setSel] = useState(null);
+    const [err, setErr] = useState("");
+    const [moments, setMoments] = useState([]);
+    const [items, setItems] = useState([]);
+    const [aliasMap, setAliasMap] = useState({});
+    const [movingParent, setMovingParent] = useState("");
+
+    async function loadTree() {
+        setLoading(true);
+        setErr("");
+        try {
+            const r = await fetch("/api/account/folders", { cache: "no-store" });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j?.error || "Load failed");
+            setTree(j.tree || []);
+            if (!sel && (j.tree?.length || 0) > 0) setSel(j.tree[0].id);
+        } catch (e) {
+            setErr(e.message || "Load failed");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function loadMoments() {
+        const r = await fetch("/api/account/my-moments", { cache: "no-store" });
+        const j = await r.json();
+        if (r.ok) setMoments(j.items || []);
+    }
+
+    async function loadItems(folderId) {
+        if (!folderId) return;
+        const r = await fetch(`/api/account/folders/${folderId}/moments`, {
+            cache: "no-store"
+        });
+        const j = await r.json();
+        if (r.ok) {
+            setItems(j.items || []);
+            const map = {};
+            (j.items || []).forEach((it) => (map[it.id] = it.alias || ""));
+            setAliasMap(map);
+        }
+    }
+
+    useEffect(() => {
+        loadTree();
+        loadMoments();
+    }, []);
+
+    useEffect(() => {
+        if (sel) loadItems(sel);
+    }, [sel]);
+
+    const styles = {
+        wrap: {
+            marginTop: 16,
+            display: "grid",
+            gridTemplateColumns: "240px 1fr",
+            gap: 12
+        },
+        card: {
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.03)"
+        },
+        head: {
+            padding: "10px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.10)",
+            fontWeight: 700,
+            color: "#EAF2FF"
+        },
+        sideBody: { padding: 10 },
+        line: {
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 8px",
+            borderRadius: 8,
+            cursor: "pointer",
+            color: "#C7D3E8"
+        },
+        active: {
+            background: "rgba(13,99,229,0.18)",
+            color: "#FFFFFF",
+            border: "1px solid rgba(127,179,255,0.35)"
+        },
+        btn: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.16)",
+            background: "#0D63E5",
+            color: "#FFF",
+            fontWeight: 600,
+            fontSize: 13
+        },
+        ghost: {
+            background: "transparent",
+            color: "#C7D3E8"
+        },
+        bar: {
+            display: "flex",
+            gap: 8,
+            padding: 10,
+            borderBottom: "1px solid rgba(255,255,255,0.10)"
+        },
+        input: {
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid rgba(127,179,255,0.25)",
+            background: "rgba(8,12,24,0.7)",
+            color: "#EAF2FF",
+            outline: "none",
+            fontSize: 14
+        },
+        mainBody: { padding: 10, display: "grid", gap: 10 },
+        row: {
+            display: "grid",
+            gridTemplateColumns: "minmax(220px,1fr) 1fr auto",
+            gap: 8,
+            padding: "10px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.10)"
+        },
+        hint: { fontSize: 12, color: "#8FA5C6" }
+    };
+
+    function renderNode(n, depth) {
+        const pad = { paddingLeft: 8 + depth * 12 };
+        const active = n.id === sel;
+        return (
+            <div key={n.id}>
+                <div
+                    style={{ ...styles.line, ...(active ? styles.active : {}), ...pad }}
+                    onClick={() => setSel(n.id)}
+                >
+                    <span>📁</span>
+                    <span style={{ fontWeight: 600 }}>{n.name}</span>
+                </div>
+                {(n.children || []).map((c) => renderNode(c, depth + 1))}
+            </div>
+        );
+    }
+
+    async function createFolder(parentId) {
+        const name = prompt("Folder name:");
+        if (!name) return;
+        const r = await fetch("/api/account/folders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, parentId: parentId || null })
+        });
+        if (r.ok) loadTree();
+        else alert("Create failed");
+    }
+
+    async function renameFolder() {
+        if (!sel) return;
+        const name = prompt("New name:");
+        if (!name) return;
+        const r = await fetch(`/api/account/folders/${sel}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name })
+        });
+        if (r.ok) loadTree();
+        else alert("Rename failed");
+    }
+
+    async function moveFolder() {
+        if (!sel) return;
+        const to = movingParent || null;
+        const r = await fetch(`/api/account/folders/${sel}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parentId: to })
+        });
+        if (r.ok) {
+            setMovingParent("");
+            loadTree();
+        } else {
+            alert("Move failed");
+        }
+    }
+
+    async function deleteFolder() {
+        if (!sel) return;
+        if (!confirm("Delete this folder and its items?")) return;
+        const r = await fetch(`/api/account/folders/${sel}`, { method: "DELETE" });
+        if (r.ok) {
+            setSel(null);
+            loadTree();
+            setItems([]);
+        } else {
+            alert("Delete failed");
+        }
+    }
+
+    async function addItem() {
+        if (!sel) return;
+        const choose = prompt(
+            "Enter Moment ID (or paste slug). You can open another tab to copy ID."
+        );
+        if (!choose) return;
+
+        let pick =
+            moments.find((m) => m.id === choose) ||
+            moments.find((m) => m.slug === choose);
+        if (!pick) {
+            alert("Moment not found in your list");
+            return;
+        }
+
+        const alias = prompt("Alias (optional):") || "";
+        const r = await fetch(`/api/account/folders/${sel}/moments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ momentId: pick.id, alias })
+        });
+        if (r.ok) loadItems(sel);
+        else alert("Add failed");
+    }
+
+    async function saveAlias(itemId) {
+        const alias = aliasMap[itemId] || "";
+        const r = await fetch(`/api/account/folder-items/${itemId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ alias })
+        });
+        if (!r.ok) alert("Save failed");
+    }
+
+    async function removeItem(itemId) {
+        if (!confirm("Remove this countdown from the folder?")) return;
+        const r = await fetch(`/api/account/folder-items/${itemId}`, {
+            method: "DELETE"
+        });
+        if (r.ok) loadItems(sel);
+        else alert("Remove failed");
+    }
+
+    const flatFolders = useMemo(() => {
+        const arr = [];
+        const walk = (nodes, d) =>
+            nodes.forEach((n) => {
+                arr.push({ id: n.id, name: `${"— ".repeat(d)}${n.name}` });
+                walk(n.children || [], d + 1);
+            });
+        walk(tree, 0);
+        return arr;
+    }, [tree]);
+
+    return (
+        <div style={styles.wrap}>
+            <aside style={styles.card}>
+                <div style={styles.head}>Folders</div>
+                <div style={styles.sideBody}>
+                    <div style={{ display: "grid", gap: 8, marginBottom: 8 }}>
+                        <button style={styles.btn} onClick={() => createFolder(null)}>
+                            + New root
+                        </button>
+                        {!!sel && (
+                            <button
+                                style={{ ...styles.btn, ...styles.ghost, borderColor: "rgba(255,255,255,0.16)" }}
+                                onClick={() => createFolder(sel)}
+                            >
+                                + New subfolder
+                            </button>
+                        )}
+                    </div>
+
+                    {loading && <div style={styles.hint}>Loading…</div>}
+                    {!!err && <div style={{ color: "salmon" }}>{err}</div>}
+
+                    <div>{tree.map((n) => renderNode(n, 0))}</div>
+                </div>
+            </aside>
+
+            {/* right: content */}
+            <section style={styles.card}>
+                <div style={styles.bar}>
+                    <button style={styles.btn} onClick={addItem}>
+                        Add countdown
+                    </button>
+
+                    <button
+                        style={{ ...styles.btn, ...styles.ghost }}
+                        onClick={renameFolder}
+                        disabled={!sel}
+                    >
+                        Rename
+                    </button>
+
+                    <select
+                        value={movingParent}
+                        onChange={(e) => setMovingParent(e.target.value)}
+                        style={{ ...styles.input, maxWidth: 280 }}
+                    >
+                        <option value="">Move to… (choose parent)</option>
+                        <option value="">(root)</option>
+                        {flatFolders
+                            .filter((f) => f.id !== sel)
+                            .map((f) => (
+                                <option key={f.id} value={f.id}>
+                                    {f.name}
+                                </option>
+                            ))}
+                    </select>
+
+                    <button
+                        style={{ ...styles.btn, ...styles.ghost }}
+                        onClick={moveFolder}
+                        disabled={!sel || movingParent === undefined}
+                    >
+                        Apply move
+                    </button>
+
+                    <div style={{ flex: 1 }} />
+
+                    <button
+                        style={{
+                            ...styles.btn,
+                            background: "rgba(255,80,80,0.2)",
+                            borderColor: "rgba(255,80,80,0.45)",
+                            color: "#FFD8D8"
+                        }}
+                        onClick={deleteFolder}
+                        disabled={!sel}
+                    >
+                        Delete
+                    </button>
+                </div>
+
+                <div style={styles.mainBody}>
+                    {!sel && <div style={styles.hint}>Select a folder to manage its items.</div>}
+
+                    {sel &&
+                        items.map((it) => (
+                            <div key={it.id} style={styles.row}>
+                                <div>
+                                    <a
+                                        href={`/c/${it.moment.slug}`}
+                                        style={{ color: "#EAF2FF", textDecoration: "none", fontWeight: 700 }}
+                                    >
+                                        {it.moment.title}
+                                    </a>
+                                    <div style={styles.hint}>
+                                        /c/{it.moment.slug} · {it.moment.isEpic ? "EPIC" : "normal"} · {it.moment.theme}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <input
+                                        style={styles.input}
+                                        placeholder="Alias (optional)"
+                                        value={aliasMap[it.id] || ""}
+                                        onChange={(e) =>
+                                            setAliasMap((m) => ({ ...m, [it.id]: e.target.value }))
+                                        }
+                                    />
+                                </div>
+
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button style={styles.btn} onClick={() => saveAlias(it.id)}>
+                                        Save alias
+                                    </button>
+                                    <button
+                                        style={{ ...styles.btn, ...styles.ghost }}
+                                        onClick={() => removeItem(it.id)}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                    {sel && items.length === 0 && (
+                        <div style={styles.hint}>This folder is empty. Click “Add countdown”.</div>
+                    )}
+                </div>
+            </section>
+        </div>
+    );
+}

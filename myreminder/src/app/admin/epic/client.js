@@ -331,6 +331,26 @@ export default function AdminEpicClient() {
                                 <div style={{ display: 'grid', gap: 4 }}>
                                     <span style={styles.badge}>{item.status}</span>
 
+                                    {item.type === 'SECURITY_LOGIN_ALERT' && (
+                                        <span style={{
+                                            ...styles.badge,
+                                            border: '1px solid rgba(255,215,0,0.35)',
+                                            background: 'linear-gradient(180deg, rgba(255,215,0,0.18), rgba(255,215,0,0.08))',
+                                            color: '#FFE58A',
+                                            fontWeight: 700
+                                        }}>
+                                            New device
+                                        </span>
+                                    )}
+
+                                    {(item.meta?.city || item.meta?.ip) && (
+                                        <span style={styles.badge}>
+                                            {item.meta?.city ? `${item.meta.city}` : ''}
+                                            {item.meta?.city && item.meta?.ip ? ' · ' : ''}
+                                            {item.meta?.ip ? `IP ${item.meta.ip}` : ''}
+                                        </span>
+                                    )}
+
                                     {item.decidedAt && (
                                         <span
                                             style={{

@@ -50,6 +50,16 @@ export const authOptions = {
                 await logSecurityEvent({ userId: session.userId, type: "SIGN_OUT" });
             }
         },
+        async signIn({ user }) {
+            try {
+                const { logSecurityEvent } = await import("@/lib/security");
+                await logSecurityEvent({
+                    userId: user?.id,
+                    type: "LOGIN_SUCCESS",
+                    meta: {},
+                });
+            } catch { }
+        },
     },
     trustHost: true,
     secret: process.env.AUTH_SECRET,

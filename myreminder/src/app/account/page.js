@@ -74,6 +74,21 @@ export default async function AccountPage() {
 
     return (
         <main style={styles.page}>
+            <a href="/account/folders" className="navLink navGhost" style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                borderRadius: 12,
+                fontSize: 14,
+                height: 38,
+                padding: "0 12px",
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+                color: "#C7D3E8"
+            }}>
+                Manage Folders
+            </a>
             <div style={styles.grid} aria-hidden />
             <div style={styles.rays} aria-hidden />
             <div style={styles.shell}>

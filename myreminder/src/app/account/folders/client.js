@@ -19,7 +19,9 @@ export default function FoldersClient() {
             const j = await r.json();
             if (!r.ok) throw new Error(j?.error || "Load failed");
             setTree(j.tree || []);
-            if (!sel && (j.tree?.length || 0) > 0) setSel(j.tree[0].id);
+            if (!sel && (j.tree || []).length) {
+                setSel(j.tree[0].id);
+            }
         } catch (e) {
             setErr(e.message || "Load failed");
         } finally {
@@ -35,14 +37,17 @@ export default function FoldersClient() {
 
     async function loadItems(folderId) {
         if (!folderId) return;
-        const r = await fetch(`/api/account/folders/${folderId}/moments`, {
-            cache: "no-store"
-        });
+        const r = await fetch(
+            `/api/account/folders/${folderId}/moments`,
+            { cache: "no-store" }
+        );
         const j = await r.json();
         if (r.ok) {
             setItems(j.items || []);
             const map = {};
-            (j.items || []).forEach((it) => (map[it.id] = it.alias || ""));
+            (j.items || []).forEach((it) => {
+                map[it.id] = it.alias || "";
+            });
             setAliasMap(map);
         }
     }
@@ -60,17 +65,18 @@ export default function FoldersClient() {
         wrap: {
             marginTop: 16,
             display: "grid",
-            gridTemplateColumns: "240px 1fr",
+            gridTemplateColumns: "260px 1fr",
             gap: 12
         },
         card: {
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.03)"
+            borderRadius: 14,
+            border: "1px solid rgba(255,255,255,0.10)",
+            background:
+                "linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))"
         },
-        head: {
-            padding: "10px 12px",
-            borderBottom: "1px solid rgba(255,255,255,0.10)",
+        sideHead: {
+            padding: "12px 14px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
             fontWeight: 700,
             color: "#EAF2FF"
         },
@@ -79,58 +85,75 @@ export default function FoldersClient() {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            padding: "6px 8px",
-            borderRadius: 8,
+            padding: "6px 6px",
+            borderRadius: 10,
             cursor: "pointer",
             color: "#C7D3E8"
         },
-        active: {
-            background: "rgba(13,99,229,0.18)",
+        lineActive: {
+            background:
+                "linear-gradient(180deg, rgba(13,99,229,0.18), rgba(13,99,229,0.12))",
             color: "#FFFFFF",
             border: "1px solid rgba(127,179,255,0.35)"
         },
         btn: {
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
+            gap: 8,
             padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.16)",
-            background: "#0D63E5",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background:
+                "linear-gradient(180deg,#0D63E5 0%,#0A4BBB 100%)",
             color: "#FFF",
             fontWeight: 600,
+            boxShadow:
+                "0 10px 18px rgba(13,99,229,0.28)," +
+                " inset 0 1px 0 rgba(255,255,255,0.2)",
             fontSize: 13
         },
         ghost: {
-            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.10)",
+            background:
+                "linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))",
             color: "#C7D3E8"
         },
         bar: {
             display: "flex",
             gap: 8,
             padding: 10,
-            borderBottom: "1px solid rgba(255,255,255,0.10)"
+            borderBottom: "1px solid rgba(255,255,255,0.08)"
         },
-        input: {
-            width: "100%",
-            padding: "8px 10px",
-            borderRadius: 8,
-            border: "1px solid rgba(127,179,255,0.25)",
-            background: "rgba(8,12,24,0.7)",
-            color: "#EAF2FF",
-            outline: "none",
-            fontSize: 14
+        mainBody: {
+            padding: 10,
+            display: "grid",
+            gap: 10
         },
-        mainBody: { padding: 10, display: "grid", gap: 10 },
         row: {
             display: "grid",
             gridTemplateColumns: "minmax(220px,1fr) 1fr auto",
             gap: 8,
-            padding: "10px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.10)"
+            padding: "10px 10px",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background:
+                "linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))"
         },
-        hint: { fontSize: 12, color: "#8FA5C6" }
+        input: {
+            width: "100%",
+            padding: 10,
+            borderRadius: 10,
+            border: "1px solid rgba(127,179,255,0.25)",
+            background:
+                "linear-gradient(180deg,rgba(8,12,24,0.8),rgba(9,11,19,0.8))",
+            color: "#EAF2FF",
+            outline: "none",
+            fontSize: 14
+        },
+        hint: {
+            fontSize: 12,
+            color: "#8FA5C6"
+        }
     };
 
     function renderNode(n, depth) {
@@ -139,12 +162,17 @@ export default function FoldersClient() {
         return (
             <div key={n.id}>
                 <div
-                    style={{ ...styles.line, ...(active ? styles.active : {}), ...pad }}
+                    style={{
+                        ...styles.line,
+                        ...(active ? styles.lineActive : {}),
+                        ...pad
+                    }}
                     onClick={() => setSel(n.id)}
                 >
                     <span>📁</span>
                     <span style={{ fontWeight: 600 }}>{n.name}</span>
                 </div>
+
                 {(n.children || []).map((c) => renderNode(c, depth + 1))}
             </div>
         );
@@ -153,36 +181,50 @@ export default function FoldersClient() {
     async function createFolder(parentId) {
         const name = prompt("Folder name:");
         if (!name) return;
+
         const r = await fetch("/api/account/folders", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, parentId: parentId || null })
         });
-        if (r.ok) loadTree();
-        else alert("Create failed");
+
+        if (r.ok) {
+            loadTree();
+        } else {
+            alert("Create failed");
+        }
     }
 
     async function renameFolder() {
         if (!sel) return;
+
         const name = prompt("New name:");
         if (!name) return;
+
         const r = await fetch(`/api/account/folders/${sel}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name })
         });
-        if (r.ok) loadTree();
-        else alert("Rename failed");
+
+        if (r.ok) {
+            loadTree();
+        } else {
+            alert("Rename failed");
+        }
     }
 
     async function moveFolder() {
         if (!sel) return;
+
         const to = movingParent || null;
+
         const r = await fetch(`/api/account/folders/${sel}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ parentId: to })
         });
+
         if (r.ok) {
             setMovingParent("");
             loadTree();
@@ -193,8 +235,13 @@ export default function FoldersClient() {
 
     async function deleteFolder() {
         if (!sel) return;
+
         if (!confirm("Delete this folder and its items?")) return;
-        const r = await fetch(`/api/account/folders/${sel}`, { method: "DELETE" });
+
+        const r = await fetch(`/api/account/folders/${sel}`, {
+            method: "DELETE"
+        });
+
         if (r.ok) {
             setSel(null);
             loadTree();
@@ -206,46 +253,60 @@ export default function FoldersClient() {
 
     async function addItem() {
         if (!sel) return;
+
         const choose = prompt(
-            "Enter Moment ID (or paste slug). You can open another tab to copy ID."
+            "Enter Moment ID to add (or paste slug). You can also open another tab to copy ID."
         );
         if (!choose) return;
 
         let pick =
             moments.find((m) => m.id === choose) ||
             moments.find((m) => m.slug === choose);
+
         if (!pick) {
             alert("Moment not found in your list");
             return;
         }
 
         const alias = prompt("Alias (optional):") || "";
+
         const r = await fetch(`/api/account/folders/${sel}/moments`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ momentId: pick.id, alias })
         });
-        if (r.ok) loadItems(sel);
-        else alert("Add failed");
+
+        if (r.ok) {
+            loadItems(sel);
+        } else {
+            alert("Add failed");
+        }
     }
 
     async function saveAlias(itemId) {
         const alias = aliasMap[itemId] || "";
+
         const r = await fetch(`/api/account/folder-items/${itemId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ alias })
         });
+
         if (!r.ok) alert("Save failed");
     }
 
     async function removeItem(itemId) {
         if (!confirm("Remove this countdown from the folder?")) return;
+
         const r = await fetch(`/api/account/folder-items/${itemId}`, {
             method: "DELETE"
         });
-        if (r.ok) loadItems(sel);
-        else alert("Remove failed");
+
+        if (r.ok) {
+            loadItems(sel);
+        } else {
+            alert("Remove failed");
+        }
     }
 
     const flatFolders = useMemo(() => {
@@ -262,15 +323,26 @@ export default function FoldersClient() {
     return (
         <div style={styles.wrap}>
             <aside style={styles.card}>
-                <div style={styles.head}>Folders</div>
+                <div style={styles.sideHead}>Folders</div>
+
                 <div style={styles.sideBody}>
-                    <div style={{ display: "grid", gap: 8, marginBottom: 8 }}>
-                        <button style={styles.btn} onClick={() => createFolder(null)}>
+                    <div
+                        style={{
+                            display: "grid",
+                            gap: 8,
+                            marginBottom: 8
+                        }}
+                    >
+                        <button
+                            style={styles.btn}
+                            onClick={() => createFolder(null)}
+                        >
                             + New root
                         </button>
+
                         {!!sel && (
                             <button
-                                style={{ ...styles.btn, ...styles.ghost, borderColor: "rgba(255,255,255,0.16)" }}
+                                style={{ ...styles.btn, ...styles.ghost }}
                                 onClick={() => createFolder(sel)}
                             >
                                 + New subfolder
@@ -285,7 +357,7 @@ export default function FoldersClient() {
                 </div>
             </aside>
 
-            {/* right: content */}
+            {/* 右侧主区 */}
             <section style={styles.card}>
                 <div style={styles.bar}>
                     <button style={styles.btn} onClick={addItem}>
@@ -303,10 +375,14 @@ export default function FoldersClient() {
                     <select
                         value={movingParent}
                         onChange={(e) => setMovingParent(e.target.value)}
-                        style={{ ...styles.input, maxWidth: 280 }}
+                        style={styles.input}
                     >
-                        <option value="">Move to… (choose parent)</option>
-                        <option value="">(root)</option>
+                        <option value="">
+                            Move to… (choose parent)
+                        </option>
+                        <option value="">
+                            (root)
+                        </option>
                         {flatFolders
                             .filter((f) => f.id !== sel)
                             .map((f) => (
@@ -329,8 +405,9 @@ export default function FoldersClient() {
                     <button
                         style={{
                             ...styles.btn,
-                            background: "rgba(255,80,80,0.2)",
-                            borderColor: "rgba(255,80,80,0.45)",
+                            border: "1px solid rgba(255,80,80,0.35)",
+                            background:
+                                "linear-gradient(180deg,rgba(255,80,80,0.15),rgba(255,80,80,0.08))",
                             color: "#FFD8D8"
                         }}
                         onClick={deleteFolder}
@@ -341,7 +418,11 @@ export default function FoldersClient() {
                 </div>
 
                 <div style={styles.mainBody}>
-                    {!sel && <div style={styles.hint}>Select a folder to manage its items.</div>}
+                    {!sel && (
+                        <div style={styles.hint}>
+                            Select a folder to manage its items.
+                        </div>
+                    )}
 
                     {sel &&
                         items.map((it) => (
@@ -349,12 +430,19 @@ export default function FoldersClient() {
                                 <div>
                                     <a
                                         href={`/c/${it.moment.slug}`}
-                                        style={{ color: "#EAF2FF", textDecoration: "none", fontWeight: 700 }}
+                                        style={{
+                                            color: "#EAF2FF",
+                                            textDecoration: "none",
+                                            fontWeight: 700
+                                        }}
                                     >
                                         {it.moment.title}
                                     </a>
+
                                     <div style={styles.hint}>
-                                        /c/{it.moment.slug} · {it.moment.isEpic ? "EPIC" : "normal"} · {it.moment.theme}
+                                        /c/{it.moment.slug} ·{" "}
+                                        {it.moment.isEpic ? "EPIC" : "normal"} ·{" "}
+                                        {it.moment.theme}
                                     </div>
                                 </div>
 
@@ -364,15 +452,22 @@ export default function FoldersClient() {
                                         placeholder="Alias (optional)"
                                         value={aliasMap[it.id] || ""}
                                         onChange={(e) =>
-                                            setAliasMap((m) => ({ ...m, [it.id]: e.target.value }))
+                                            setAliasMap({
+                                                ...aliasMap,
+                                                [it.id]: e.target.value
+                                            })
                                         }
                                     />
                                 </div>
 
                                 <div style={{ display: "flex", gap: 8 }}>
-                                    <button style={styles.btn} onClick={() => saveAlias(it.id)}>
+                                    <button
+                                        style={styles.btn}
+                                        onClick={() => saveAlias(it.id)}
+                                    >
                                         Save alias
                                     </button>
+
                                     <button
                                         style={{ ...styles.btn, ...styles.ghost }}
                                         onClick={() => removeItem(it.id)}
@@ -384,7 +479,9 @@ export default function FoldersClient() {
                         ))}
 
                     {sel && items.length === 0 && (
-                        <div style={styles.hint}>This folder is empty. Click “Add countdown”.</div>
+                        <div style={styles.hint}>
+                            This folder is empty. Click “Add countdown”.
+                        </div>
                     )}
                 </div>
             </section>

@@ -10,6 +10,10 @@ export default function FoldersClient() {
     const [items, setItems] = useState([]);
     const [aliasMap, setAliasMap] = useState({});
     const [movingParent, setMovingParent] = useState("");
+    const [showPicker, setShowPicker] = useState(false);
+    const [pickQ, setPickQ] = useState("");
+    const [aliasDraft, setAliasDraft] = useState({});
+    const [addingId, setAddingId] = useState("");
 
     async function loadTree() {
         setLoading(true);
@@ -153,6 +157,47 @@ export default function FoldersClient() {
         hint: {
             fontSize: 12,
             color: "#8FA5C6"
+        },
+        overlay: {
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            display: "grid", placeItems: "center", zIndex: 200
+        },
+        modal: {
+            width: "min(920px, 96vw)",
+            maxHeight: "82vh",
+            overflow: "hidden",
+            borderRadius: 16,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "linear-gradient(180deg, rgba(13,16,31,0.92), rgba(12,14,24,0.88))",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.55)"
+        },
+        modalHead: {
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 14px",
+            borderBottom: "1px solid rgba(255,255,255,0.10)",
+            color: "#EAF2FF", fontWeight: 700
+        },
+        modalBody: {
+            padding: 12, display: "grid", gap: 10, maxHeight: "calc(82vh - 58px)", overflow: "auto"
+        },
+        listRow: {
+            display: "grid",
+            gridTemplateColumns: "minmax(260px,1fr) 1fr auto",
+            gap: 10,
+            padding: 10,
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))"
+        },
+        meta: { fontSize: 12, color: "#8FA5C6" },
+        badge: {
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "2px 8px", borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.10)"
+        },
+        disabledBtn: {
+            opacity: 0.5, cursor: "not-allowed"
         }
     };
 
@@ -251,35 +296,32 @@ export default function FoldersClient() {
         }
     }
 
-    async function addItem() {
+    function addItem() {
         if (!sel) return;
+        setPickQ("");
+        setShowPicker(true);
+    }
 
-        const choose = prompt(
-            "Enter Moment ID to add (or paste slug). You can also open another tab to copy ID."
-        );
-        if (!choose) return;
+    async function addToFolder(momentId) {
+        if (!sel || !momentId || addingId) return;
+        setAddingId(momentId);
+        try {
+            const alias = aliasDraft[momentId] || "";
+            const r = await fetch(`/api/account/folders/${sel}/moments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ momentId, alias })
+            });
+            if (!r.ok) {
+                const j = await r.json().catch(() => ({}));
+                throw new Error(j?.error || "Add failed");
+            }
+            await loadItems(sel);
 
-        let pick =
-            moments.find((m) => m.id === choose) ||
-            moments.find((m) => m.slug === choose);
-
-        if (!pick) {
-            alert("Moment not found in your list");
-            return;
-        }
-
-        const alias = prompt("Alias (optional):") || "";
-
-        const r = await fetch(`/api/account/folders/${sel}/moments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ momentId: pick.id, alias })
-        });
-
-        if (r.ok) {
-            loadItems(sel);
-        } else {
-            alert("Add failed");
+        } catch (e) {
+            alert(e.message || "Add failed");
+        } finally {
+            setAddingId("");
         }
     }
 
@@ -319,6 +361,17 @@ export default function FoldersClient() {
         walk(tree, 0);
         return arr;
     }, [tree]);
+
+    const existingIds = useMemo(() => new Set(items.map(it => it.momentId)), [items]);
+    const filteredMoments = useMemo(() => {
+        const q = pickQ.trim().toLowerCase();
+        if (!q) return moments;
+        return moments.filter(m =>
+            (m.title || "").toLowerCase().includes(q) ||
+            (m.slug || "").toLowerCase().includes(q) ||
+            (m.theme || "").toLowerCase().includes(q)
+        );
+    }, [pickQ, moments]);
 
     return (
         <div style={styles.wrap}>
@@ -485,6 +538,82 @@ export default function FoldersClient() {
                     )}
                 </div>
             </section>
+
+            {showPicker && (
+                <div style={styles.overlay} onClick={() => setShowPicker(false)}>
+                    <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+                        <div style={styles.modalHead}>
+                            <span>Select countdowns to add</span>
+                            <div style={{ flex: 1 }} />
+                            <button
+                                style={{ ...styles.btn, ...styles.ghost }}
+                                onClick={() => setShowPicker(false)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div style={styles.modalBody}>
+                            <input
+                                style={styles.input}
+                                placeholder="Search my countdowns (title / slug / theme)…"
+                                value={pickQ}
+                                onChange={(e) => setPickQ(e.target.value)}
+                            />
+
+                            {filteredMoments.map((m) => {
+                                const exists = existingIds.has(m.id);
+                                return (
+                                    <div key={m.id} style={styles.listRow}>
+                                        <div>
+                                            <div style={{ fontWeight: 700, color: "#EAF2FF" }}>
+                                                {m.title}
+                                            </div>
+                                            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                                                <span style={styles.badge}>/c/{m.slug}</span>
+                                                <span style={styles.badge}>
+                                                    {m.isEpic ? "EPIC" : "normal"}
+                                                </span>
+                                                <span style={styles.badge}>{m.theme || "default"}</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <input
+                                                style={styles.input}
+                                                placeholder="Alias (optional)"
+                                                value={aliasDraft[m.id] || ""}
+                                                onChange={(e) =>
+                                                    setAliasDraft((d) => ({ ...d, [m.id]: e.target.value }))
+                                                }
+                                            />
+                                        </div>
+
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                                            <button
+                                                style={{
+                                                    ...styles.btn,
+                                                    ...(exists || addingId === m.id ? styles.disabledBtn : {})
+                                                }}
+                                                disabled={exists || addingId === m.id}
+                                                onClick={() => addToFolder(m.id)}
+                                            >
+                                                {exists ? "Added" : (addingId === m.id ? "Adding…" : "Add")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {filteredMoments.length === 0 && (
+                                <div style={{ color: "#B9C6DD" }}>
+                                    No results. Try a different query.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

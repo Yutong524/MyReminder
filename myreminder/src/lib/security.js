@@ -13,12 +13,23 @@ export function cityFromHeaders(headers) {
     return h("x-vercel-ip-city") || h("cf-ipcity") || h("fly-client-city") || null;
 }
 
+export const SECURITY_ALERT_WINDOW_DAYS = 45;
+
+export function getIpUaCityFromRequest(req) {
+    const ip = req ? ipFromHeaders(req.headers) : null;
+    const userAgent = req ? req.headers.get("user-agent") || null : null;
+    const city = req ? cityFromHeaders(req.headers) : null;
+    return { ip, userAgent, city };
+}
+
+function shortUA(ua) {
+    return (ua || "").slice(0, 300);
+}
+
 
 export async function logSecurityEvent({ userId, type, req, meta }) {
     try {
-        const ip = req ? ipFromHeaders(req.headers) : null;
-        const ua = req ? req.headers.get("user-agent") || null : null;
-        const city = req ? cityFromHeaders(req.headers) : null;
+        const { ip, userAgent: ua, city } = getIpUaCityFromRequest(req);
         await prisma.securityEvent.create({
             data: {
                 userId,
@@ -36,9 +47,7 @@ export async function logSecurityEvent({ userId, type, req, meta }) {
 export async function touchCurrentSession({ req, userId, sessionToken }) {
     if (!sessionToken || !userId) return;
     try {
-        const ip = ipFromHeaders(req.headers);
-        const ua = req.headers.get("user-agent") || null;
-        const city = cityFromHeaders(req.headers);
+        const { ip, userAgent: ua, city } = getIpUaCityFromRequest(req);
 
         const s = await prisma.session.findUnique({ where: { sessionToken } });
         const firstWrite = !s?.ip && !s?.userAgent;
@@ -59,9 +68,9 @@ export async function touchCurrentSession({ req, userId, sessionToken }) {
 export async function maybeAlertNewDevice({ userId, ip, userAgent, city }) {
     try {
         if (!userId) return;
-        const ua = (userAgent || "").slice(0, 300);
-        const fingerprint = `${ip || "?"}|${city || "?"}|${ua || "?"}`;
-        const since = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
+        const uaShort = shortUA(userAgent);
+        const fingerprint = `${ip || "?"}|${city || "?"}|${uaShort || "?"}`;
+        const since = new Date(Date.now() - SECURITY_ALERT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
         const existed = await prisma.securityEvent.findFirst({
             where: {
@@ -78,12 +87,12 @@ export async function maybeAlertNewDevice({ userId, ip, userAgent, city }) {
             where: {
                 userId,
                 OR: [{ lastSeenAt: { gte: since } }, { expires: { gte: since } }],
-                ip: ip || undefined,
-                userAgent: ua || undefined,
-                city: city || undefined
+                ...(ip ? { ip } : {}),
+                ...(city ? { city } : {})
             },
             select: { id: true }
         });
+
         if (seen) return;
 
         const user = await prisma.user.findUnique({
@@ -100,7 +109,7 @@ export async function maybeAlertNewDevice({ userId, ip, userAgent, city }) {
                  <ul>
                    <li><b>City:</b> ${city || "Unknown"}</li>
                    <li><b>IP:</b> ${ip || "Unknown"}</li>
-                   <li><b>User Agent:</b> ${ua || "Unknown"}</li>
+                   <li><b>User Agent:</b> ${uaShort || "Unknown"}</li>
                    <li><b>Time:</b> ${new Date().toLocaleString()}</li>
                  </ul>
                  <p>If this wasn't you, please enable 2FA and revoke other sessions.</p>
@@ -113,7 +122,7 @@ export async function maybeAlertNewDevice({ userId, ip, userAgent, city }) {
                 userId,
                 type: "SECURITY_LOGIN_ALERT",
                 ip: ip || null,
-                userAgent: ua || null,
+                userAgent: userAgent || null,
                 meta: { fingerprint, city: city || null }
             }
         });

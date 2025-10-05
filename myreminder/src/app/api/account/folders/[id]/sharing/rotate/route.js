@@ -2,43 +2,64 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { randomToken } from "@/lib/crypto";
-import { loadFolderAndRole } from "@/lib/folder-sharing";
+import { randomToken, logSecurityEvent } from "@/lib/security";
 
-export async function POST(_req, { params }) {
+export async function POST(req, { params }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
     );
 
-    const { id } = params;
-    const ctx = await loadFolderAndRole({
-        folderId: id,
-        currentUserId:
-            session.user.id
+    const id = String(params.id);
+    const folder = await prisma.folder.findUnique({
+        where: { id }
     });
-    if (!ctx) return NextResponse.json(
+    if (!folder) return NextResponse.json(
         { error: "Not found" },
         { status: 404 }
     );
-    if (!ctx.canTogglePublic) return NextResponse.json(
-        { error: "No permission" },
-        { status: 403 }
-    );
 
-    const token = randomToken(24);
-    await prisma.folder.update({
+    const isOwner = folder.userId === session.user.id;
+    const member = await prisma.folderMember.findFirst({
+        where: {
+            folderId: id,
+            userId: session.user.id
+        }
+    });
+    const role = isOwner ? "OWNER" : (member?.role || null);
+    if (!(isOwner || role === "OWNER")) {
+        return NextResponse.json(
+            { error: "Forbidden" },
+            { status: 403 }
+        );
+    }
+
+    if (!folder.publicEnabled) {
+        return NextResponse.json(
+            { error: "Public link disabled" },
+            { status: 400 }
+        );
+    }
+
+    const saved = await prisma.folder.update({
         where: { id },
-        data: {
-            publicToken: token,
-            publicEnabled: true,
-            publicUpdatedAt: new Date()
-        },
+        data: { publicToken: randomToken(24) }
     });
 
+    await logSecurityEvent({
+        userId: session.user.id,
+        type: "PUBLIC_LINK_CONFIGURED",
+        req,
+        meta: {
+            folderId: id,
+            rotated: true
+        }
+    });
+
+    const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     return NextResponse.json({
         ok: true,
-        token
+        publicUrl: `${base}/share/${saved.publicToken}`
     });
 }

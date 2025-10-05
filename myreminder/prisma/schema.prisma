@@ -116,6 +116,10 @@ model User {
   SecurityEvent        SecurityEvent[]
   folders              Folder[]
   folderMemberships    FolderMember[]
+  icsEnabled           Boolean   @default(false)
+  icsToken             String?   @unique
+  icsTimezone          String?
+  icsIncludeFollowing  Boolean  @default(false)
 }
 
 model Account {

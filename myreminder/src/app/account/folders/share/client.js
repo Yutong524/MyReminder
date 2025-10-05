@@ -12,6 +12,8 @@ export default function ShareClient() {
     const [msg, setMsg] = useState("");
     const [addEmail, setAddEmail] = useState("");
     const [addRole, setAddRole] = useState("VIEWER");
+    const [expiryLocal, setExpiryLocal] = useState("");
+    const [password, setPassword] = useState("");
 
     const styles = {
         wrap: {
@@ -171,6 +173,17 @@ export default function ShareClient() {
             const j = await r.json();
             if (!r.ok) throw new Error(j?.error || "Load sharing failed");
             setSharing(j);
+
+            if (j?.publicExpiresAt) {
+                const d = new Date(j.publicExpiresAt);
+                const pad = (n) => String(n).padStart(2, "0");
+                const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                setExpiryLocal(local);
+            } else {
+                setExpiryLocal("");
+            }
+
+            setPassword("");
         } catch (e) {
             setMsg(e.message || "Load sharing failed");
         } finally {
@@ -210,6 +223,26 @@ export default function ShareClient() {
             return;
         }
         setMsg("Updated.");
+        loadSharing(sel);
+    }
+
+    const localToUtcIso = (local) => (local ? new Date(local).toISOString() : null);
+    async function saveSharingAdvanced() {
+        if (!sel) return;
+        const publicExpiresAt = expiryLocal ? localToUtcIso(expiryLocal) : null;
+        const publicPassword = password || "";
+        const r = await fetch(`/api/account/folders/${sel}/sharing`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                publicEnabled: true,
+                publicExpiresAt,
+                publicPassword
+            })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) return setMsg(j?.error || "Save failed");
+        setMsg("Saved.");
         loadSharing(sel);
     }
 
@@ -332,6 +365,38 @@ export default function ShareClient() {
                                                 Rotate link
                                             </button>
                                         </div>
+
+                                        {sharing?.publicEnabled && (
+                                            <div style={{ display: "grid", gap: 10 }}>
+                                                <label>
+                                                    <div className="label" style={styles.hint}>Expiry (optional)</div>
+                                                    <input
+                                                        type="datetime-local"
+                                                        className="i"
+                                                        style={styles.input}
+                                                        value={expiryLocal}
+                                                        onChange={(e) => setExpiryLocal(e.target.value)}
+                                                    />
+                                                    <div style={styles.hint}>Leave empty to never expire.</div>
+                                                </label>
+                                                <label>
+                                                    <div className="label" style={styles.hint}>Password (optional)</div>
+                                                    <input
+                                                        type="password"
+                                                        className="i"
+                                                        style={styles.input}
+                                                        placeholder="Set or update password; leave blank to clear"
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
+                                                    />
+                                                </label>
+                                                <div style={{ display: "flex", gap: 8 }}>
+                                                    <button className="cta" style={styles.btn} onClick={saveSharingAdvanced}>
+                                                        Save sharing settings
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {sharing?.publicEnabled && (
                                             <div style={styles.row}>

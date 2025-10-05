@@ -23,11 +23,21 @@ export async function GET() {
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const rows = await prisma.folder.findMany({
-        where: { userId: session.user.id },
-        orderBy: [
-            { parentId: "asc" },
-            { name: "asc" }
-        ],
+        where: {
+            OR: [
+                { userId: session.user.id },
+                {
+                    members: {
+                        some: {
+                            userId: session.user.id,
+                            role: { in: ["VIEWER", "EDITOR", "OWNER"] }
+                        }
+                    }
+                }
+            ]
+        },
+
+        orderBy: [{ parentId: "asc" }, { name: "asc" }],
         select: {
             id: true,
             name: true,

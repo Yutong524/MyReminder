@@ -115,6 +115,7 @@ model User {
   twoFactorVerifiedAt  DateTime?
   SecurityEvent        SecurityEvent[]
   folders              Folder[]
+  folderMemberships    FolderMember[]
 }
 
 model Account {
@@ -369,8 +370,14 @@ model Folder {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
+  publicEnabled   Boolean      @default(false)
+  publicToken     String?      @unique
+  publicUpdatedAt DateTime?
+  members         FolderMember[]
+
   @@index([userId, parentId])
-  @@unique([userId, name, parentId]) // 同父级唯一
+  @@unique([userId, name, parentId])
+  @@index([publicEnabled])
 }
 
 model FolderItem {
@@ -385,4 +392,24 @@ model FolderItem {
 
   @@unique([folderId, momentId])
   @@index([folderId, sortOrder])
+}
+
+enum FolderRole {
+  VIEWER
+  EDITOR
+  OWNER
+}
+
+model FolderMember {
+  id        String     @id @default(cuid())
+  folderId  String
+  userId    String
+  role      FolderRole @default(VIEWER)
+  folder    Folder     @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([folderId, userId])
+  @@index([userId, role])
 }

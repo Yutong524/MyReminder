@@ -160,6 +160,9 @@ export default async function RootLayout({ children }) {
                   </svg>
                   Create
                 </a>
+                <a href="/account/calendar" className="navLink navGhost" style={{ ...styles.linkBase, ...styles.linkGhost }}>
+                  Calendar
+                </a>
               </nav>
             </div>
           </div>

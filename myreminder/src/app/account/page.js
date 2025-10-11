@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import AccountClient from "./client";
 import { prisma } from "@/lib/prisma";
+import PolicyClient from "./policy-client";
 import SubscriptionClient from "./subscription-client";
 
 export const dynamic = "force-dynamic";
@@ -111,6 +112,14 @@ export default async function AccountPage() {
                     <h2 style={{ ...styles.h1, fontSize: "clamp(20px, 3.2vw, 26px)" }}>Subscription</h2>
                     <p style={styles.sub}>Subscribe monthly or yearly. You can cancel anytime in the billing portal.</p>
                     <SubscriptionClient />
+                </section>
+
+                <section style={{ ...styles.card, marginTop: 16 }}>
+                    <h2 style={{ ...styles.h1, fontSize: "clamp(20px, 3.2vw, 26px)" }}>Policies</h2>
+                    <p style={styles.sub}>
+                        Manage your Subscription Policy and Terms of Use.
+                    </p>
+                    <PolicyClient />
                 </section>
             </div>
         </main>

@@ -120,6 +120,10 @@ model User {
   icsToken             String?   @unique
   icsTimezone          String?
   icsIncludeFollowing  Boolean  @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  plan                 String   @default("FREE")
+  planRenewsAt         DateTime?
 }
 
 model Account {

@@ -31,11 +31,14 @@ export default function AccountClient({
     const [events, setEvents] = useState([]);
     const [loadingLog, setLoadingLog] = useState(false);
 
+    const [sessionsLoaded, setSessionsLoaded] = useState(false);
+    const [logLoaded, setLogLoaded] = useState(false);
+
     const [open, setOpen] = useState({
-        overview: true,
-        email: true,
-        twofa: true,
-        linked: true,
+        overview: false,
+        email: false,
+        twofa: false,
+        linked: false,
         sessions: false,
         log: false
     });
@@ -108,7 +111,16 @@ export default function AccountClient({
         if (r.ok) setEvents(j.items || []);
     }
 
-    useEffect(() => { loadSessions(); loadSecurityLog(); }, []);
+    useEffect(() => {
+        if (open.sessions && !sessionsLoaded) {
+            loadSessions().finally(() => setSessionsLoaded(true));
+        }
+    }, [open.sessions, sessionsLoaded]);
+    useEffect(() => {
+        if (open.log && !logLoaded) {
+            loadSecurityLog().finally(() => setLogLoaded(true));
+        }
+    }, [open.log, logLoaded]);
 
     const styles = {
         sec: {
@@ -150,26 +162,37 @@ export default function AccountClient({
             alignItems: 'center',
             gap: 8,
             padding: '10px 14px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: 10,
+            border: '1px solid rgba(180,200,230,0.18)',
             background:
-                'linear-gradient(180deg, #0D63E5 0%, #0A4BBB 100%)',
+                'linear-gradient(180deg, #0E3F8F 0%, #0B2F6A 100%)',
             color: '#fff',
             fontWeight: 600,
             boxShadow:
-                '0 12px 24px rgba(13,99,229,0.30),' +
-                ' inset 0 1px 0 rgba(255,255,255,0.20)'
+                '0 8px 18px rgba(13,99,229,0.22),' +
+                ' inset 0 1px 0 rgba(255,255,255,0.12)'
         },
         btnGhost: {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
-            padding: '10px 14px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.10)',
+            padding: '9px 12px',
+            borderRadius: 10,
+            border: '1px solid rgba(160,180,210,0.16)',
             background:
-                'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+                'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
             color: '#C7D3E8'
+        },
+        cmdBtn: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: '1px solid rgba(150,170,200,0.18)',
+            background: 'linear-gradient(180deg, rgba(16,22,36,0.9), rgba(13,18,30,0.9))',
+            color: '#D5E2F7',
+            fontWeight: 600,
+            letterSpacing: '0.01em'
         },
         danger: {
             border: '1px solid rgba(255,80,80,0.35)',
@@ -239,13 +262,18 @@ export default function AccountClient({
         }
     };
 
+    const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="100%25" height="100%25" rx="16" ry="16" fill="%23151b2a"/><circle cx="64" cy="48" r="20" fill="%23233344"/><rect x="30" y="76" width="68" height="28" rx="14" fill="%23233344"/></svg>';
+
+    const initials = (initialProfile?.name || 'U').trim().split(/\s+/).slice(0, 2).map(s => s[0]?.toUpperCase()).join('') || 'U';
+
     const css = [
         '.i{ transition: border-color 160ms ease, box-shadow 160ms ease; }',
         '.i:focus{ box-shadow: 0 0 0 3px rgba(127,179,255,0.35); border-color: rgba(127,179,255,0.6); }',
         '.cta{ transition: transform 160ms ease, box-shadow 160ms ease; }',
         '.cta:hover{ transform: translateY(-1px); box-shadow: 0 16px 30px rgba(13,99,229,0.38), inset 0 1px 0 rgba(255,255,255,0.25); }',
         '.hbtn{ cursor:pointer; user-select:none; }',
-        '.kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); }'
+        '.kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); }',
+        '.cmd:hover{ transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.35); }'
     ].join('\n');
 
     async function onStart2FA() {
@@ -362,7 +390,6 @@ export default function AccountClient({
         setErr(''); setMsg('');
         setUnlinking(true);
         try {
-            // 修复：原实现中使用未定义变量 a / acc
             const r = await fetch(`/api/account/unlink/${encodeURIComponent(provider)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -405,52 +432,89 @@ export default function AccountClient({
         </span>
     );
 
+    function openAndScroll(key, elId) {
+        setOpen(v => ({ ...v, [key]: true }));
+        const el = typeof document !== 'undefined' ? document.getElementById(elId) : null;
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const anyOpen = open.overview || open.email || open.twofa || open.linked || open.sessions || open.log;
+    const toggleAll = () => setAll(!anyOpen);
+
     return (
         <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <button className="cta hbtn" style={styles.btnGhost} onClick={() => setAll(true)} aria-label="Expand all sections">
-                    Expand all
-                </button>
-                <button className="cta hbtn" style={styles.btnGhost} onClick={() => setAll(false)} aria-label="Collapse all sections">
-                    Collapse all
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                <button
+                    className="cta hbtn"
+                    style={styles.btnGhost}
+                    onClick={toggleAll}
+                    aria-label={anyOpen ? 'Collapse all sections' : 'Expand all sections'}
+                >
+                    {anyOpen ? 'Close' : 'Open'}
                 </button>
             </div>
 
             <section style={styles.sec}>
-                <div
-                    style={styles.secHead}
-                >
-                    <div>Overview</div>
+                <div style={styles.secHead}>
+                    <button
+                        className="hbtn"
+                        onClick={() => setOpen(v => ({ ...v, overview: !v.overview }))}
+                        aria-expanded={open.overview}
+                        aria-controls="overview-body"
+                        style={{ all: 'unset', cursor: 'pointer', fontWeight: 700 }}
+                    >
+                        Overview
+                    </button>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <TwoFAChip />
                         <span style={styles.tag}>Methods: {(hasEmailLogin ? 1 : 0) + linked.length}</span>
                         <span style={styles.tag}>Sessions: {sessions.length}</span>
                     </div>
                 </div>
-                <div style={styles.secBody}>
-                    <div style={styles.overview.wrap}>
-                        <img
-                            src={initialProfile?.image || '/avatar.svg'}
-                            alt={initialProfile?.name || 'User avatar'}
-                            style={styles.overview.avatar}
-                        />
-                        <div>
-                            <div style={styles.overview.name}>
-                                {initialProfile?.name || 'Unnamed User'}
-                            </div>
-                            <div style={{ ...styles.hint, marginTop: 4 }}>
-                                {email}
-                            </div>
-                            <div style={{ ...styles.overview.line, marginTop: 8 }}>
-                                <a className="cta" style={styles.btnGhost} href="#email">Edit email</a>
-                                <a className="cta" style={styles.btnGhost} href="#twofa">Manage 2FA</a>
-                                <a className="cta" style={styles.btnGhost} href="#linked">Linked accounts</a>
-                                <a className="cta" style={styles.btnGhost} href="#sessions">Sessions</a>
-                                <a className="cta" style={styles.btnGhost} href="#log">Security log</a>
+                {open.overview && (
+                    <div id="overview-body" style={styles.secBody}>
+                        <div style={styles.overview.wrap}>
+                            {(initialProfile?.image) ? (
+                                <img
+                                    src={initialProfile.image}
+                                    alt={initialProfile?.name || 'User avatar'}
+                                    style={styles.overview.avatar}
+                                    onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }}
+                                />
+                            ) : (
+                                <div
+                                    aria-label="User initials"
+                                    style={{
+                                        ...styles.overview.avatar,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'linear-gradient(180deg, #121827, #0e1422)',
+                                        color: '#AFC4E6',
+                                        fontWeight: 800
+                                    }}
+                                >
+                                    {initials}
+                                </div>
+                            )}
+                            <div>
+                                <div style={styles.overview.name}>
+                                    {initialProfile?.name || 'Unnamed User'}
+                                </div>
+                                <div style={{ ...styles.hint, marginTop: 4 }}>
+                                    {email}
+                                </div>
+                                <div style={{ ...styles.overview.line, marginTop: 8 }}>
+                                    <button type="button" className="cmd" style={styles.cmdBtn} onClick={() => openAndScroll('email', 'email')}>Edit email</button>
+                                    <button type="button" className="cmd" style={styles.cmdBtn} onClick={() => openAndScroll('twofa', 'twofa')}>Manage 2FA</button>
+                                    <button type="button" className="cmd" style={styles.cmdBtn} onClick={() => openAndScroll('linked', 'linked')}>Linked accounts</button>
+                                    <button type="button" className="cmd" style={styles.cmdBtn} onClick={() => openAndScroll('sessions', 'sessions')}>Sessions</button>
+                                    <button type="button" className="cmd" style={styles.cmdBtn} onClick={() => openAndScroll('log', 'log')}>Security log</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </section>
 
             <section style={styles.sec} id="email">

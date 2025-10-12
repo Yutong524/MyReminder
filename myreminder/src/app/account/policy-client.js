@@ -11,8 +11,12 @@ export default function PolicyClient() {
     const [copied, setCopied] = useState(false);
     const searchRef = useRef(null);
 
-    const SUBSCRIPTION_MD = ``;
-    const TERMS_MD = ``;
+    const SUBSCRIPTION_MD_FALLBACK = `# Subscription Policy\n\nContent will be published soon.`;
+    const TERMS_MD_FALLBACK = `# Terms of Use\n\nContent will be published soon.`;
+    const [subMd, setSubMd] = useState("");
+    const [termsMd, setTermsMd] = useState("");
+    const [loadingDocs, setLoadingDocs] = useState(false);
+    const [loadErr, setLoadErr] = useState("");
 
     const styles = {
         wrap: { display: "grid", gap: 12 },
@@ -240,7 +244,9 @@ export default function PolicyClient() {
         }
     }
 
-    const md = tab === "subscription" ? SUBSCRIPTION_MD : TERMS_MD;
+    const md = tab === "subscription"
+        ? (subMd || SUBSCRIPTION_MD_FALLBACK)
+        : (termsMd || TERMS_MD_FALLBACK);
     const toc = useMemo(() => buildToc(md), [md]);
 
     const baseHtml = useMemo(() => mdToHtml(md), [md]);
@@ -286,6 +292,41 @@ export default function PolicyClient() {
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function run() {
+            setLoadingDocs(true);
+            setLoadErr("");
+            try {
+                const t = await fetch("/legal/terms.md", { cache: "no-store" });
+                if (t.ok) {
+                    const txt = await t.text();
+                    if (!cancelled) setTermsMd(txt || "");
+                } else {
+                    if (!cancelled) setTermsMd("");
+                }
+
+                try {
+                    const s = await fetch("/legal/subscription.md", { cache: "no-store" });
+                    if (s.ok) {
+                        const sTxt = await s.text();
+                        if (!cancelled) setSubMd(sTxt || "");
+                    } else {
+                        if (!cancelled) setSubMd("");
+                    }
+                } catch {
+                    if (!cancelled) setSubMd("");
+                }
+            } catch (e) {
+                if (!cancelled) setLoadErr(e.message || "Failed to load policy documents.");
+            } finally {
+                if (!cancelled) setLoadingDocs(false);
+            }
+        }
+        run();
+        return () => { cancelled = true; };
     }, []);
 
     function onCopyLink() {
@@ -376,7 +417,7 @@ export default function PolicyClient() {
                         </svg>
                         <input
                             ref={searchRef}
-                            placeholder="Search (no content yet)"
+                            placeholder={loadingDocs ? "Loading…" : "Search policy…"}
                             style={styles.input}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -409,7 +450,25 @@ export default function PolicyClient() {
                         <aside style={styles.tocCard} aria-label="Table of contents">
                             <div style={styles.tocTitle}>On this page</div>
                             <nav style={{ display: "grid", gap: 4 }}>
-                                <span style={styles.hint}>No headings yet. Content will appear here later.</span>
+                                {loadingDocs ? (
+                                    <span style={styles.hint}>Loading…</span>
+                                ) : toc.length === 0 ? (
+                                    <span style={styles.hint}>No headings yet.</span>
+                                ) : (
+                                    toc.map((it) => (
+                                        <a
+                                            key={it.id}
+                                            href={`#${it.id}`}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                onJump(it.id);
+                                            }}
+                                            style={styles.tocItem(it.level - 1, activeAnchor === it.id)}
+                                        >
+                                            {it.text}
+                                        </a>
+                                    ))
+                                )}
                             </nav>
                         </aside>
                     )}
@@ -456,11 +515,14 @@ export default function PolicyClient() {
                             className="doc"
                             style={styles.doc(font)}
                             dangerouslySetInnerHTML={{
-                                __html: isEmpty ? emptyFallback : finalHtml,
+                                __html: loadErr
+                                    ? `<p style="color:salmon">${escapeHtml(loadErr)}</p>`
+                                    : loadingDocs
+                                        ? `<p style="opacity:.85">Loading…</p>`
+                                        : (isEmpty ? emptyFallback : finalHtml),
                             }}
                         />
 
-                        {/* Footer notes */}
                         <div style={styles.smallRow}>
                             <span style={styles.hint}>
                                 Read-only viewer. Legal text will be provided later from your public pages.

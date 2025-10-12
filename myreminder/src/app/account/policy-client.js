@@ -11,8 +11,9 @@ export default function PolicyClient() {
     const [copied, setCopied] = useState(false);
     const searchRef = useRef(null);
 
-    const SUBSCRIPTION_MD_FALLBACK = `# Subscription Policy\n\nContent will be published soon.`;
-    const TERMS_MD_FALLBACK = `# Terms of Use\n\nContent will be published soon.`;
+    const SUBSCRIPTION_MD_FALLBACK = `# Subscription Policy\n\nThe subscription policy 
+        will be published soon on the public page.`;
+    const TERMS_MD_FALLBACK = `# Terms of Use\n\nThe Terms of Use will be published soon on the public page.`;
     const [subMd, setSubMd] = useState("");
     const [termsMd, setTermsMd] = useState("");
     const [loadingDocs, setLoadingDocs] = useState(false);
@@ -255,7 +256,9 @@ export default function PolicyClient() {
 
     const isEmpty = !md || md.trim() === "";
     const emptyFallback =
-        `<p style="opacity:.85">No document content yet. This is a read-only viewer; legal text will be provided later.</p>`;
+        `<p style="opacity:.85">No document content yet. 
+       This is a read-only viewer; the legal text will be provided on the public page soon: 
+       <a href="${publicHref}" target="_blank" rel="noreferrer">${publicHref}</a>.</p>`;
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 220);
@@ -417,7 +420,7 @@ export default function PolicyClient() {
                         </svg>
                         <input
                             ref={searchRef}
-                            placeholder={loadingDocs ? "Loading…" : "Search policy…"}
+                            placeholder={loadingDocs ? "Loading…" : (tab === "subscription" ? "Search subscription policy…" : "Search terms…")}
                             style={styles.input}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}

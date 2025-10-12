@@ -116,6 +116,9 @@ model User {
   SecurityEvent        SecurityEvent[]
   folders              Folder[]
   folderMemberships    FolderMember[]
+  quietStartMin        Int?
+  quietEndMin          Int?
+  quietDays            Int[]             @default([])
   icsEnabled           Boolean   @default(false)
   icsToken             String?   @unique
   icsTimezone          String?
@@ -219,6 +222,7 @@ model ReminderJob {
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
   logs                    DeliveryLog[]
+  idempotencyKey          String?       @unique
 
   @@index([status, scheduledAt])
   @@index([channel, status, scheduledAt])
